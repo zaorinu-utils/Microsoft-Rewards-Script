@@ -141,7 +141,7 @@ export default class BrowserFunc {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-APP-DASHBOARD-DATA',
-                `Error fetching dashboard data: ${error instanceof Error ? error.message : String(error)}`
+                `Error fetching dashboard data: ${this.errorMessage(error)}`
             )
             throw error
         }
@@ -194,7 +194,7 @@ export default class BrowserFunc {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-BROWSER-EARNABLE-POINTS',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `An error occurred: ${this.errorMessage(error)}`
             )
             throw error
         }
@@ -254,7 +254,7 @@ export default class BrowserFunc {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-APP-EARNABLE-POINTS',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `An error occurred: ${this.errorMessage(error)}`
             )
             throw error
         }
@@ -269,7 +269,7 @@ export default class BrowserFunc {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-CURRENT-POINTS',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `An error occurred: ${this.errorMessage(error)}`
             )
             throw error
         }
@@ -341,7 +341,7 @@ export default class BrowserFunc {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'BOOTSTRAP',
-                `Failed acquiring context | error=${error instanceof Error ? error.message : String(error)}`
+                `Failed acquiring context | error=${this.errorMessage(error)}`
             )
             throw error
         }
@@ -366,7 +366,7 @@ export default class BrowserFunc {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'BOOTSTRAP',
-                `Failed to dismiss welcome dialog: ${error instanceof Error ? error.message : String(error)}`
+                `Failed to dismiss welcome dialog: ${this.errorMessage(error)}`
             )
         }
     }
@@ -385,7 +385,7 @@ export default class BrowserFunc {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'BOOTSTRAP',
-                `Failed to fetch ${route} HTML | error=${error instanceof Error ? error.message : String(error)} - snapshot and action discovery may be incomplete`
+                `Failed to fetch ${route} HTML | error=${this.errorMessage(error)} - snapshot and action discovery may be incomplete`
             )
         }
 
@@ -469,7 +469,7 @@ export default class BrowserFunc {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'BOOTSTRAP',
-                `Failed resolving action ids | error=${error instanceof Error ? error.message : String(error)}`
+                `Failed resolving action ids | error=${this.errorMessage(error)}`
             )
         }
 
@@ -490,7 +490,7 @@ export default class BrowserFunc {
                     this.bot.logger.debug(
                         this.bot.isMobile,
                         'BOOTSTRAP',
-                        `Chunk fetch failed | path=${path} | ${error instanceof Error ? error.message : String(error)}`
+                        `Chunk fetch failed | path=${path} | ${this.errorMessage(error)}`
                     )
                 }
             })
@@ -544,7 +544,7 @@ export default class BrowserFunc {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'CLOSE-BROWSER',
-                    `Session not saved (browser already closing): ${error instanceof Error ? error.message : String(error)}`
+                    `Session not saved (browser already closing): ${this.errorMessage(error)}`
                 )
             } else {
                 this.bot.logger.error(this.bot.isMobile, 'CLOSE-BROWSER', `Failed to save session: ${error}`)
@@ -600,7 +600,7 @@ export default class BrowserFunc {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'REWARDS-PAGE',
-                `Browser fetch failed for ${route} | ${error instanceof Error ? error.message : String(error)}`
+                `Browser fetch failed for ${route} | ${this.errorMessage(error)}`
             )
         }
 
@@ -630,7 +630,7 @@ export default class BrowserFunc {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 source,
-                `Could not checkpoint active session | error=${error instanceof Error ? error.message : String(error)}`
+                `Could not checkpoint active session | error=${this.errorMessage(error)}`
             )
             return false
         }
@@ -674,7 +674,7 @@ export default class BrowserFunc {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 source,
-                `Could not synchronize active browser cookies | error=${error instanceof Error ? error.message : String(error)}`
+                `Could not synchronize active browser cookies | error=${this.errorMessage(error)}`
             )
             return false
         }
@@ -734,7 +734,7 @@ export default class BrowserFunc {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 source,
-                `Could not persist refreshed cookies | error=${error instanceof Error ? error.message : String(error)}`
+                `Could not persist refreshed cookies | error=${this.errorMessage(error)}`
             )
         }
     }
@@ -988,7 +988,7 @@ export default class BrowserFunc {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'EARN-SNAPSHOT',
-                `Failed to fetch ${route} over http | ${error instanceof Error ? error.message : String(error)}`
+                `Failed to fetch ${route} over http | ${this.errorMessage(error)}`
             )
             return null
         }
