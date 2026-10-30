@@ -259,6 +259,16 @@ CONTROL_API_TOKEN=replace-with-the-same-token
 Leave `CONTROL_API_TOKEN` empty only when the API is intentionally running
 without authentication.
 
+This repository includes a read-only terminal dashboard. Start the API in one
+terminal, then run `npm run dashboard` in another. It connects to
+`CONTROL_API_URL` (default `http://127.0.0.1:3010`) and reads
+`CONTROL_API_TOKEN`; when these are unset, it also accepts `API_TOKEN` from the
+project `.env` file.
+
+To preview the interface without starting the API or bot, run
+`npm run dashboard:demo`. It displays fictional data until you press `Ctrl+C`.
+The dashboard never starts or controls a run.
+
 ### Verify the API
 
 For an unauthenticated server:
