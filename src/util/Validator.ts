@@ -228,7 +228,9 @@ function fillMissing(data: unknown, defaults: unknown, path = ''): unknown {
     if (!isPlainObject(defaults)) return data
     if (!isPlainObject(data)) {
         if (data === undefined) {
-            console.warn(`[Config] WARN: "${path || '<root>'}" missing, using default`)
+            if (process.argv.includes('-dev')) {
+                console.warn(`[Config] WARN: "${path || '<root>'}" missing, using default`)
+            }
             return defaults
         }
         return data
@@ -237,7 +239,9 @@ function fillMissing(data: unknown, defaults: unknown, path = ''): unknown {
     for (const key of Object.keys(defaults)) {
         const p = path ? `${path}.${key}` : key
         if (!(key in result)) {
-            console.warn(`[Config] WARN: "${p}" not found, using default: ${JSON.stringify(defaults[key])}`)
+            if (process.argv.includes('-dev')) {
+                console.warn(`[Config] WARN: "${p}" not found, using default: ${JSON.stringify(defaults[key])}`)
+            }
             result[key] = defaults[key]
         } else if (isPlainObject(defaults[key])) {
             result[key] = fillMissing(result[key], defaults[key], p)

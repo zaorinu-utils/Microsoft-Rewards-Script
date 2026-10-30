@@ -4,6 +4,7 @@ import { sendDiscord } from './Discord'
 import type { MicrosoftRewardsBot } from '../index'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
 import type { LogFilter } from '../interface/Config'
+import { terminalDashboard } from '../interface/TerminalDashboard'
 
 export type Platform = boolean | 'main'
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
@@ -39,8 +40,9 @@ function consoleOut(level: LogLevel, msg: string, chalkFn: ChalkFn | null): void
     }
 }
 
-function formatMessage(message: string | Error): string {
+function formatMessage(message: string | Error, includeStack = true): string {
     if (!(message instanceof Error)) return message.replace(/\r?\n/g, '\\n')
+    if (!includeStack) return message.message
 
     const stackFrames = message.stack
         ?.split(/\r?\n/)
@@ -83,6 +85,7 @@ export class Logger {
 
         const now = new Date().toLocaleString()
         const formatted = formatMessage(message)
+        const displayMessage = formatMessage(message, process.argv.includes('-dev') || !process.stdout.isTTY)
         const userName = this.bot.userData.userName || 'MAIN'
         const levelTag = level.toUpperCase()
         const cleanMsg = `[${now}] [${userName}] [${levelTag}] ${platformText(isMobile)} [${title}] ${formatted}`
@@ -104,8 +107,16 @@ export class Logger {
                 else if (level === 'debug') logColor = 'magenta'
             }
 
-            const consoleStr = `[${now}] [${userName}] [${levelTag}] ${platformBadge(isMobile)} [${title}] ${formatted}`
-            consoleOut(level, consoleStr, getColorFn(logColor))
+            const displayedLog = terminalDashboard.writeLog(
+                level,
+                userName,
+                title,
+                `${platformText(isMobile)} ${displayMessage}`
+            )
+            if (!displayedLog) {
+                const consoleStr = `[${now}] [${userName}] [${levelTag}] ${platformBadge(isMobile)} [${title}] ${displayMessage}`
+                consoleOut(level, consoleStr, getColorFn(logColor))
+            }
         }
 
         if (!webhookAllowed || level === 'debug') return

@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { applyDashboardEvent, createDashboardState, parseSseFrame, renderDashboard } from './dashboard.js'
+import {
+    applyDashboardEvent,
+    createDashboardState,
+    DASHBOARD_ART,
+    parseSseFrame,
+    renderDashboard
+} from './dashboard-cli.js'
 
 test('parses JSON Server-Sent Events', () => {
     assert.deepEqual(parseSseFrame('event: status\ndata: {"state":"running"}'), {
@@ -39,12 +45,23 @@ test('updates the live summary and retains recent log events', () => {
     assert.equal(state.events[0].text, 'RUN: Started')
 })
 
-test('renders the requested ASCII art and labels simulated data', () => {
+test('renders the exact requested ASCII art in cyan and labels simulated data', () => {
     const state = createDashboardState({ mode: 'demo' })
-    const screen = renderDashboard(state)
+    const expectedArt = [
+        '                                        ',
+        '                    ,--.    ,--.        ',
+        " ,---. ,---.  ,---. |  |,-. `--' ,---.  ",
+        "| .--'| .-. || .-. ||     / ,--.| .-. : ",
+        "\\ `--.' '-' '' '-' '|  \\  \\ |  |\\   --. ",
+        " `---' `---'  `---' `--'`--'`--' `----' ",
+        '                                        ',
+        '                                        '
+    ].join('\n')
+    const screen = renderDashboard(state, 80, true)
 
-    assert.ok(screen.split('\n').includes(" .--.  .--.  .--. : `'.'.-. .--. "))
-    assert.ok(screen.split('\n').includes("'  ..'' .; :' .; :: . `.: :' '_.'"))
+    assert.equal(DASHBOARD_ART, expectedArt)
+    assert.ok(screen.startsWith(`\u001b[36m${expectedArt.split('\n')[0]}`))
+    assert.ok(screen.includes('\u001b[39m'))
     assert.match(screen, /DEMO - DUMMY DATA/)
     assert.match(screen, /Waiting for account activity/)
 })
