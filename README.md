@@ -16,17 +16,27 @@ A TypeScript application that runs Microsoft Rewards workflows in a browser. It 
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
 ```
 
-Copy `config/env.example` to `.env` and set at least one `ACCOUNT_N_EMAIL`. Then run:
+`npm install` installs the dependencies and Chromium automatically.
+
+Run the setup wizard, then build and start the application:
 
 ```bash
+npm run setup
 npm run build
 npm run start
 ```
 
-If `config.json` does not exist, the application creates it from `config/config.example.json` and does not overwrite existing files. See the [usage and installation guide](docs/usage.md) and [configuration guide](docs/configuration.md).
+Before starting, run `npm run doctor` to check Node.js, accounts, configuration,
+and the installed Chromium browser. The command reports each prerequisite
+without opening the application.
+
+Production uses `workspace/accounts.txt` and `workspace/config.json`. Development
+uses `workspace/accounts.dev.txt` and `workspace/config.dev.json`; create them
+with `npm run setup:dev`. Test credentials stay separate from real accounts.
+
+The wizard creates `workspace/config.json` and `workspace/accounts.txt`. Keep those files local; the workspace is ignored by Git. See the [usage and installation guide](docs/usage.md) and [configuration guide](docs/configuration.md).
 
 ## Commands
 
@@ -70,19 +80,17 @@ API local opcional e notificações por Discord, ntfy ou Telegram.
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
 ```
 
-Copie `config/env.example` para `.env` e informe ao menos um `ACCOUNT_N_EMAIL`. Depois:
+Execute o setup, compile e inicie o aplicativo:
 
 ```bash
+npm run setup
 npm run build
 npm run start
 ```
 
-Se `config.json` não existir, a aplicação cria uma cópia de
-`config/config.example.json` sem substituir arquivos existentes. Consulte
-[Instalação](docs/installation.md) e [Configuração](docs/configuration.md).
+O wizard cria `workspace/config.json` e `workspace/accounts.txt`. Mantenha esses arquivos locais; o workspace é ignorado pelo Git. Consulte [Instalação e uso](docs/usage.md) e [Configuração](docs/configuration.md).
 
 ## Comandos
 

@@ -107,14 +107,23 @@ const PORT =
         ? integerSetting('--port', cliArgs.port, 3010, { max: 65535 })
         : integerSetting('API_PORT', envStr('API_PORT'), 3010, { max: 65535 })
 const TOKEN = envStr('API_TOKEN') ?? (typeof cliArgs.token === 'string' ? cliArgs.token : undefined)
-const CORS_ORIGIN = envStr('API_CORS_ORIGIN') ?? '*'
+const CORS_ORIGIN = envStr('API_CORS_ORIGIN') ?? ''
 const LOG_BUFFER = integerSetting('API_LOG_BUFFER', envStr('API_LOG_BUFFER'), 2000)
 const STOP_TIMEOUT_MS = integerSetting('API_STOP_TIMEOUT_MS', envStr('API_STOP_TIMEOUT_MS'), 15000)
 const ALLOW_ENV_OVERRIDES = envBool('API_ALLOW_ENV_OVERRIDES', false)
 const ALLOW_SCHEDULE_WRITE = envBool('API_ALLOW_SCHEDULE_WRITE', false)
 
+function isLoopbackHost(host) {
+    return host === '127.0.0.1' || host === '::1' || host === 'localhost'
+}
+
+if (!isLoopbackHost(HOST) && !TOKEN) {
+    log('ERROR', 'API_TOKEN is required when binding the API to a non-loopback address.')
+    process.exit(1)
+}
+
 const RUN_HISTORY = integerSetting('API_RUN_HISTORY', envStr('API_RUN_HISTORY'), 20)
-const DIAG_DIR = envStr('API_DIAGNOSTICS_DIR') ?? path.join(projectRoot, 'diagnostics')
+const DIAG_DIR = envStr('API_DIAGNOSTICS_DIR') ?? path.join(projectRoot, 'workspace', 'diagnostics')
 
 const { command, args } = resolveRunCommand({ projectRoot })
 
@@ -168,7 +177,7 @@ function toHistoryRecord(entry) {
 }
 
 function applyCors(res) {
-    res.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN)
+    if (CORS_ORIGIN) res.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN)
     res.setHeader('Vary', 'Origin')
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-API-Key')
@@ -478,7 +487,10 @@ const requestHandler = async (req, res) => {
 
         // conf read
         if (method === 'GET' && pathname === '/config') {
-            return sendJson(res, 200, { source: envStr('BOT_CONFIG') ? 'BOT_CONFIG' : 'defaults', config: redactSecrets(appConfig) })
+            return sendJson(res, 200, {
+                source: envStr('BOT_CONFIG') ? 'BOT_CONFIG' : 'defaults',
+                config: redactSecrets(appConfig)
+            })
         }
 
         // sched read

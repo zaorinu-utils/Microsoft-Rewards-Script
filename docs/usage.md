@@ -8,17 +8,36 @@ Requirements: Node.js 24 or newer, npm, Windows/Linux/macOS/WSL, and internet ac
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
 ```
 
-Copy `config/env.example` to `.env` and set at least one `ACCOUNT_N_EMAIL`. On first startup, `config.json` is created from `config/config.example.json` and an existing configuration is never overwritten. You can also create the files manually:
+`npm install` installs dependencies and Chromium automatically. On Linux,
+the Chromium installer also installs system packages when npm is run as root.
+
+Run the setup wizard and build/start normally:
 
 ```bash
-cp config/env.example .env
-cp config/config.example.json config.json
+npm run setup
+npm run build
+npm run start
 ```
 
-In PowerShell, use `Copy-Item` with the same paths. Build with `npm run build` and run with `npm run start`. Manual login requires a graphical session to open Chromium.
+Setup creates `workspace/accounts.txt` and `workspace/config.json`. Manual login requires a graphical session to open Chromium.
+
+Run `npm run doctor` before the application to verify Node.js, accounts,
+configuration, and Chromium in one step.
+
+Use `npm run setup` for production files (`workspace/accounts.txt` and
+`workspace/config.json`). Use `npm run setup:dev` for development files
+(`workspace/accounts.dev.txt` and `workspace/config.dev.json`). `npm run dev`
+selects development files automatically. Check the development setup with
+`npm run doctor -- -dev`.
+The setup wizard asks for a Discord webhook URL. Leave it empty to disable
+notifications; otherwise, it sends a test message and retries until the URL
+works.
+Use the numbered menu to add or remove accounts and review the current setup
+without exposing passwords. If production files are missing when the app
+starts, the same wizard runs automatically and the app continues when setup
+is completed.
 
 ## Main Application
 
@@ -55,7 +74,10 @@ npm run build
 
 ## Troubleshooting
 
-If the browser does not start, run `npm run install:browser`. On Linux, install the system libraries required by Chromium. For configuration errors, compare `config.json` with `config/config.example.json`; accounts use the `ACCOUNT_N_*` names from `config/env.example` and require at least one email address.
+If Chromium starts without system libraries, run `npm run doctor`. It reports
+the missing browser or executable details. On Linux, install missing system
+libraries with `npm run install:browser-deps`; this command may require your
+system administrator password. Run `npm run setup` to create accounts.
 
 If login repeats, list sessions with `npm run clear-sessions -- list`, remove only the affected account with `npm run clear-sessions -- email person@example.com`, and log in again manually. Sessions contain cookies and must not be shared.
 
@@ -74,18 +96,11 @@ internet. Em Linux, Chromium pode exigir bibliotecas de sistema adicionais.
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
 ```
 
-Copie `config/env.example` para `.env` e informe ao menos um
-`ACCOUNT_N_EMAIL`. `config.json` é criado de `config/config.example.json` na
-primeira inicialização e nunca sobrescreve uma configuração existente. Também
-é possível criar os arquivos manualmente:
-
-```bash
-cp config/env.example .env
-cp config/config.example.json config.json
-```
+Execute `npm run setup` para criar `workspace/accounts.txt` e
+`workspace/config.json`. Os arquivos do workspace são locais e não são
+versionados.
 
 No PowerShell, use `Copy-Item` com os mesmos caminhos. Compile com
 `npm run build` e execute com `npm run start`. O login manual precisa de sessão
@@ -143,10 +158,10 @@ npm run build
 
 ## Diagnóstico
 
-Se o navegador não iniciar, rode `npm run install:browser`. No Linux, instale
-as bibliotecas de sistema exigidas pelo Chromium. Para erros de configuração,
-compare `config.json` com `config/config.example.json`; contas usam os nomes
-`ACCOUNT_N_*` de `config/env.example` e exigem ao menos um e-mail.
+Se o Chromium não iniciar por falta de bibliotecas, execute `npm run doctor`.
+No Linux, instale as bibliotecas com `npm run install:browser-deps`; o comando
+pode pedir a senha do administrador. Para configurar contas, execute
+`npm run setup`.
 
 Se o login se repetir, liste sessões com `npm run clear-sessions -- list`,
 remova apenas a conta afetada com `npm run clear-sessions -- email

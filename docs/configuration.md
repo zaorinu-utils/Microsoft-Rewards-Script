@@ -1,23 +1,25 @@
 # Configuration
 
-Application preferences live in the root `config.json`. If the file does not exist, the application copies `config/config.example.json` once and validates the options at startup. Invalid fields are reported and, when possible, replaced with default values. The versioned example contains the complete list of options.
+Application preferences are maintained internally by the bot. `workspace/config.json` is for user integrations, currently the Discord webhook.
 
-Account-specific data lives in `.env`, created from `config/env.example`. Git ignores this file. Do not commit passwords, TOTP secrets, proxy passwords, API tokens, or webhook credentials.
+Account-specific data lives in `workspace/accounts.txt` and is written by `npm run setup`. The workspace directory is Git ignored; do not commit passwords, TOTP secrets, API tokens, or webhook credentials.
+
+The password for protected login and error dumps is generated locally at runtime and stored in `workspace/.diagnostics-password`. Each dump is saved as one `workspace/diagnostics/<reference-id>.rrdump` ZIP archive containing `dump.html`, `screenshot.png`, and `error.txt`. Error dumps are enabled by default with `errorDiagnostics: true`.
 
 ## Accounts
 
-Add one numbered block per account. Numbers may have gaps; accounts are processed in ascending order.
+Add one block per account in `workspace/accounts.txt`. Separate multiple accounts with a blank line.
 
-```dotenv
-ACCOUNT_1_EMAIL=person@example.com
-# ACCOUNT_1_PASSWORD=
-# ACCOUNT_1_TOTP_SECRET=
-# ACCOUNT_1_RECOVERY_EMAIL=
-# ACCOUNT_1_LANG_CODE=en-US
-# ACCOUNT_1_GEO_LOCALE=auto
+```text
+email: person@example.com
+password: account-password
+totpSecret: base32-secret
+
+email: second@example.com
+password: another-password
 ```
 
-The password is optional for passwordless accounts. The language accepts a BCP 47 tag such as `en-US`; the region accepts a two-letter code or `auto`. In automatic mode, the profile region is stored after a successful dashboard request. `config/env.example` lists proxy and fingerprint persistence options.
+Use `npm run setup` to create or append accounts safely. Passwords stay in the local workspace directory, which is Git ignored.
 
 ## Application Options
 
@@ -25,7 +27,7 @@ Keep these options in `config.json`; there are no `CONFIG_*` environment variabl
 
 | Section                                                                | Purpose                                                               |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `sessionPath`, `headless`, `clusters`, `accountDelay`, `globalTimeout` | Storage, browser visibility, concurrency, and timeouts                |
+| Application internals                                                   | Storage, browser visibility, concurrency, and timeouts               |
 | `workers`                                                              | Enable or disable individual workflows                                |
 | `activities`                                                           | URL Reward and Explore on Bing activities                             |
 | `searchSettings`                                                       | Query sources, intervals, result interaction, and concurrency         |
@@ -34,44 +36,33 @@ Keep these options in `config.json`; there are no `CONFIG_*` environment variabl
 | `consoleLogFilter`, `debugLogs`, `errorDiagnostics`                    | Console output and diagnostics                                        |
 | `webhook`                                                              | Discord, ntfy, Telegram, and notification filters                     |
 
-Durations accept numeric milliseconds or strings such as `30sec` and `1min`. For intervals, `max` must be greater than or equal to `min`. Query sources include `google`, `wikipedia`, `wikirandom`, `hackernews`, `reddit`, and configured RSS feeds. Queries come from these external sources; if none respond, search is skipped rather than using a local fallback list. Defaults are in [`config/config.example.json`](../config/config.example.json).
+Durations accept numeric milliseconds or strings such as `30sec` and `1min`. For intervals, `max` must be greater than or equal to `min`. Query sources include `google`, `wikipedia`, `wikirandom`, `hackernews`, `reddit`, and configured RSS feeds. Queries come from these external sources; if none respond, search is skipped rather than using a local fallback list. Internal defaults are in [`src/constants/appConfig.json`](../src/constants/appConfig.json).
 
 The distributed example sets `headless` to `false`. Use headless mode on servers without a graphical environment.
 
 ## API and Scheduling
 
-API options are environment variables listed in `config/env.example` and the [API guide](../scripts/api/README.md). API configuration and schedule changes are disabled by default. The schedule is stored in `config/schedule.json`; the API process checks it once per minute using the system's local time zone or the `TZ` value. Keep the API running to trigger scheduled runs. Existing runs are not overlapped.
+API options are environment variables documented in the [API guide](../scripts/api/README.md). API configuration and schedule changes are disabled by default. The schedule is stored in `config/schedule.json`; the API process checks it once per minute using the system's local time zone or the `TZ` value. Keep the API running to trigger scheduled runs. Existing runs are not overlapped.
 
 # Configuração
 
-As preferências do aplicativo ficam no `config.json` da raiz. Se o arquivo não
-existir, a aplicação copia `config/config.example.json` uma única vez e valida as
-opções ao iniciar. Campos inválidos são reportados e, quando possível,
-substituídos pelos valores padrão. O exemplo versionado contém a lista completa
-de opções.
+As preferências do aplicativo ficam em `workspace/config.json`. Se o arquivo não existir, a aplicação o cria a partir dos padrões internos e valida as opções ao iniciar.
 
-Os dados específicos das contas ficam em `.env`, criado a partir de
-`config/env.example`. Esse arquivo é ignorado pelo Git. Não versione senhas, segredos
-TOTP, senhas de proxy, tokens da API ou credenciais de webhook.
+Os dados das contas ficam em `workspace/accounts.txt` e são criados pelo comando `npm run setup`. O diretório workspace é ignorado pelo Git. Não versione senhas, segredos, tokens da API ou credenciais de webhook.
 
 ## Contas
 
-Adicione um bloco numerado por conta. Os números podem ter lacunas; as contas
-são processadas em ordem crescente.
+Adicione um bloco por conta em `workspace/accounts.txt`. Separe contas múltiplas com uma linha vazia.
 
-```dotenv
-ACCOUNT_1_EMAIL=pessoa@example.com
-# ACCOUNT_1_PASSWORD=
-# ACCOUNT_1_TOTP_SECRET=
-# ACCOUNT_1_RECOVERY_EMAIL=
-# ACCOUNT_1_LANG_CODE=pt-BR
-# ACCOUNT_1_GEO_LOCALE=auto
+```text
+email: pessoa@example.com
+password: senha-da-conta
+
+email: segunda@example.com
+password: outra-senha
 ```
 
-A senha é opcional para contas com login sem senha. O idioma aceita uma tag BCP
-47, como `pt-BR`; a região aceita um código de duas letras ou `auto`. Em modo
-automático, a região do perfil é armazenada após uma consulta bem-sucedida ao
-painel. `config/env.example` lista as opções de proxy e persistência de fingerprint.
+Use `npm run setup` para criar ou adicionar contas. Senhas ficam no workspace local, que é ignorado pelo Git.
 
 ## Opções do aplicativo
 
@@ -94,15 +85,13 @@ intervalos, `max` deve ser maior ou igual a `min`. Fontes de consulta incluem
 `google`, `wikipedia`, `wikirandom`, `hackernews`, `reddit` e feeds RSS
 configurados. As consultas vêm dessas fontes externas; se nenhuma responder, a
 execução de busca é ignorada, sem lista local de reserva. Os valores padrão estão em
-[`config/config.example.json`](../config/config.example.json).
+[`src/constants/appConfig.json`](../src/constants/appConfig.json).
 
-O exemplo distribuído define `headless` como `false`. Use o modo headless em
-servidores sem ambiente gráfico.
+O padrão distribuído define `headless` como `true`. Use o modo gráfico no workspace quando precisar acompanhar a janela do navegador.
 
 ## API e agenda
 
-As opções da API são variáveis de ambiente listadas em `config/env.example` e no
-[guia da API](../scripts/api/README.md). Alterações de configuração e agenda
+As opções da API estão documentadas no [guia da API](../scripts/api/README.md). Alterações de configuração e agenda
 pela API ficam desativadas por padrão. A agenda é armazenada em
 `config/schedule.json`; o processo da API a verifica uma vez por minuto no fuso
 local do sistema ou no valor de `TZ`. Mantenha a API em execução para disparar

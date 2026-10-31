@@ -2005,26 +2005,26 @@ Most errors use this shape:
 
 All variables are optional.
 
-| Variable                   | Default                       | Purpose                                                                                     |
-| -------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
-| `API_HOST`                 | `127.0.0.1`                   | Interface to bind. Use `0.0.0.0` only when remote access is required.                       |
-| `API_PORT`                 | `3010`                        | HTTP listen port.                                                                           |
-| `API_TOKEN`                | unset                         | Shared token required by every endpoint when configured.                                    |
-| `API_CORS_ORIGIN`          | `*`                           | Value returned in `Access-Control-Allow-Origin`.                                            |
-| `API_LOG_BUFFER`           | `2000`                        | Maximum structured log entries kept in memory.                                              |
-| `API_RUN_HISTORY`          | `20`                          | Maximum completed runs kept in memory.                                                      |
-| `API_STOP_TIMEOUT_MS`      | `15000`                       | Graceful-stop window before forced termination.                                             |
-| `API_RUN_COMMAND`          | auto                          | Override the executable used to launch the bot.                                             |
-| `API_RUN_ARGS`             | none                          | Default arguments for `API_RUN_COMMAND`; accepts whitespace-separated text or a JSON array. |
-| `API_DIAGNOSTICS_DIR`      | `<repo>/diagnostics`          | Read-only diagnostics directory.                                                            |
-| `API_ALLOW_CONFIG_WRITE`   | `false`                       | Permit `PUT` and `PATCH /config`.                                                           |
-| `API_ALLOW_SCHEDULE_WRITE` | `false`                       | Permit `PUT` and `PATCH /schedule`.                                                         |
-| `API_ALLOW_ENV_OVERRIDES`  | `false`                       | Permit arbitrary `env` fields in `/start` and `/restart`.                                   |
-| `API_ALLOW_CONFIG_REVEAL`  | `false`                       | Permit authenticated `GET /config?reveal=1`.                                                |
-| `API_VALIDATOR_MODULE`     | auto                          | Path to a compiled module exporting `validateConfig` or `ConfigSchema`.                     |
-| `SCHEDULE_FILE`            | `<repo>/config/schedule.json` | Override the persisted schedule file path.                                                  |
-| `CRON_SCHEDULE`            | unset                         | Base schedule when no persisted schedule override exists.                                   |
-| `TZ`                       | host local timezone           | Timezone used by the scheduler and returned by `/schedule`.                                 |
+| Variable                   | Default                        | Purpose                                                                                     |
+| -------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `API_HOST`                 | `127.0.0.1`                    | Interface to bind. Use `0.0.0.0` only when remote access is required.                       |
+| `API_PORT`                 | `3010`                         | HTTP listen port.                                                                           |
+| `API_TOKEN`                | unset                          | Shared token required by every endpoint when configured.                                    |
+| `API_CORS_ORIGIN`          | unset                          | Optional exact origin returned in `Access-Control-Allow-Origin`.                            |
+| `API_LOG_BUFFER`           | `2000`                         | Maximum structured log entries kept in memory.                                              |
+| `API_RUN_HISTORY`          | `20`                           | Maximum completed runs kept in memory.                                                      |
+| `API_STOP_TIMEOUT_MS`      | `15000`                        | Graceful-stop window before forced termination.                                             |
+| `API_RUN_COMMAND`          | auto                           | Override the executable used to launch the bot.                                             |
+| `API_RUN_ARGS`             | none                           | Default arguments for `API_RUN_COMMAND`; accepts whitespace-separated text or a JSON array. |
+| `API_DIAGNOSTICS_DIR`      | `<repo>/workspace/diagnostics` | Read-only diagnostics directory.                                                            |
+| `API_ALLOW_CONFIG_WRITE`   | `false`                        | Permit `PUT` and `PATCH /config`.                                                           |
+| `API_ALLOW_SCHEDULE_WRITE` | `false`                        | Permit `PUT` and `PATCH /schedule`.                                                         |
+| `API_ALLOW_ENV_OVERRIDES`  | `false`                        | Permit arbitrary `env` fields in `/start` and `/restart`.                                   |
+| `API_ALLOW_CONFIG_REVEAL`  | `false`                        | Permit authenticated `GET /config?reveal=1`.                                                |
+| `API_VALIDATOR_MODULE`     | auto                           | Path to a compiled module exporting `validateConfig` or `ConfigSchema`.                     |
+| `SCHEDULE_FILE`            | `<repo>/config/schedule.json`  | Override the persisted schedule file path.                                                  |
+| `CRON_SCHEDULE`            | unset                          | Base schedule when no persisted schedule override exists.                                   |
+| `TZ`                       | host local timezone            | Timezone used by the scheduler and returned by `/schedule`.                                 |
 
 The equivalent CLI flags are `--host`, `--port`, and `--token`:
 

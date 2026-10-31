@@ -1,102 +1,142 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { createHash } from 'crypto'
+import os from 'os'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+import { randomInt } from 'crypto'
 import type { Page } from 'patchright'
+import { createErrorReference } from '../constants/errorWords'
+import { getWorkspaceDirectory } from './AppPaths'
+
+const execFileAsync = promisify(execFile)
+const scheduledErrorDiagnostics = new Set<string>()
 
 interface UnknownPageDiagnosticOptions {
     platform: 'mobile' | 'desktop'
+    password: string
 }
 
-function safePathSegment(value: string, fallback: string): string {
-    const sanitized = value
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 80)
+const diagnosticWords = [
+    'amber',
+    'cedar',
+    'coral',
+    'grain',
+    'forest',
+    'haven',
+    'maple',
+    'mist',
+    'north',
+    'oak',
+    'pixel',
+    'river',
+    'rook',
+    'silver',
+    'stone',
+    'summit',
+    'tide',
+    'zenith'
+] as const
 
-    return sanitized || fallback
+export function createDiagnosticId(): string {
+    const words = [
+        diagnosticWords[randomInt(diagnosticWords.length)],
+        diagnosticWords[randomInt(diagnosticWords.length)],
+        diagnosticWords[randomInt(diagnosticWords.length)],
+        diagnosticWords[randomInt(diagnosticWords.length)]
+    ]
+    return words.join('-')
 }
 
-function unknownPageOutputDir(rawUrl: string, capturedAt: string, platform: string): string {
-    let hostname = 'unknown-host'
-    let pathname = 'root'
+async function saveEncryptedDiagnostic(
+    id: string,
+    password: string,
+    files: Array<{ name: string; content: string | Buffer }>
+): Promise<string | null> {
+    if (!password) return null
+
+    const diagnosticsDirectory = path.join(getWorkspaceDirectory(), 'diagnostics')
+    const archivePath = path.join(diagnosticsDirectory, `${id}.rrdump`)
+    const temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'rewards-diagnostic-'))
 
     try {
-        const url = new URL(rawUrl)
-        hostname = safePathSegment(url.hostname, hostname)
-        pathname = safePathSegment(url.pathname, pathname)
-    } catch {
-        pathname = safePathSegment(rawUrl, 'unknown-page')
+        await fs.mkdir(diagnosticsDirectory, { recursive: true })
+        await Promise.all(files.map(file => fs.writeFile(path.join(temporaryDirectory, file.name), file.content)))
+        await execFileAsync('zip', [
+            '-q',
+            '-j',
+            '-P',
+            password,
+            archivePath,
+            ...files.map(file => path.join(temporaryDirectory, file.name))
+        ])
+        return archivePath
+    } finally {
+        await fs.rm(temporaryDirectory, { recursive: true, force: true }).catch(() => {})
     }
-
-    const urlHash = createHash('sha256').update(rawUrl).digest('hex').slice(0, 12)
-    const urlFolder = `${pathname}-${urlHash}`
-    const captureFolder = `${capturedAt.replace(/[:.]/g, '-')}-${platform}`
-
-    return path.join(process.cwd(), 'diagnostics', 'unknown-login-pages', hostname, urlFolder, captureFolder)
 }
 
-export async function errorDiagnostic(page: Page, error: Error): Promise<void> {
+export async function errorDiagnostic(page: Page, error: Error, password: string): Promise<string | null> {
+    const id = createErrorReference(error)
+    if (scheduledErrorDiagnostics.has(id)) return null
+    scheduledErrorDiagnostics.add(id)
+
     try {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-        const folderName = `error-${timestamp}`
-        const outputDir = path.join(process.cwd(), 'diagnostics', folderName)
+        const timestamp = new Date().toISOString()
 
         if (!page) {
-            return
+            return null
         }
 
         if (page.isClosed()) {
-            return
+            return null
         }
 
-        const errorLog = `
-Name: ${error.name}
+        const errorLog = `ID: ${id}
 Message: ${error.message}
-Timestamp: ${new Date().toISOString()}
+Timestamp: ${timestamp}
 ---------------------------------------------------
 Stack Trace:
 ${error.stack || 'No stack trace available'}
         `.trim()
-
-        const [htmlContent, screenshotBuffer] = await Promise.all([
-            page.content(),
-            page.screenshot({ fullPage: true, type: 'png' })
-        ])
-
-        await fs.mkdir(outputDir, { recursive: true })
-
-        await Promise.all([
-            fs.writeFile(path.join(outputDir, 'dump.html'), htmlContent),
-            fs.writeFile(path.join(outputDir, 'screenshot.png'), screenshotBuffer),
-            fs.writeFile(path.join(outputDir, 'error.txt'), errorLog)
-        ])
-
-        console.log(`Diagnostics saved to: ${outputDir}`)
-    } catch (error) {
-        console.error('Unable to create error diagnostics:', error)
-    }
-}
-
-export async function unknownPageDiagnostic(
-    page: Page,
-    { platform }: UnknownPageDiagnosticOptions
-): Promise<string | null> {
-    if (!page || page.isClosed()) return null
-
-    const capturedAt = new Date().toISOString()
-    const rawUrl = page.url()
-    const outputDir = unknownPageOutputDir(rawUrl, capturedAt, platform)
-
-    try {
-        await fs.mkdir(outputDir, { recursive: true })
 
         const [htmlResult, screenshotResult] = await Promise.allSettled([
             page.content(),
             page.screenshot({ fullPage: true, type: 'png' })
         ])
 
+        const files: Array<{ name: string; content: string | Buffer }> = []
+        if (htmlResult.status === 'fulfilled') {
+            files.push({ name: 'dump.html', content: htmlResult.value })
+        }
+        if (screenshotResult.status === 'fulfilled') {
+            files.push({ name: 'screenshot.png', content: screenshotResult.value })
+        }
+        files.push({ name: 'error.txt', content: errorLog })
+
+        return await saveEncryptedDiagnostic(id, password, files)
+    } catch {
+        return null
+    }
+}
+
+export async function unknownPageDiagnostic(
+    page: Page,
+    { platform, password }: UnknownPageDiagnosticOptions
+): Promise<string | null> {
+    if (!page || page.isClosed()) return null
+
+    const capturedAt = new Date().toISOString()
+    const rawUrl = page.url()
+    const id = createDiagnosticId()
+
+    try {
+        const [htmlResult, screenshotResult] = await Promise.allSettled([
+            page.content(),
+            page.screenshot({ fullPage: true, type: 'png' })
+        ])
+
         const metadata = {
+            id,
             url: rawUrl,
             capturedAt,
             platform,
@@ -112,20 +152,15 @@ export async function unknownPageDiagnostic(
             ].filter((error): error is string => error !== null)
         }
 
-        const writes: Promise<void>[] = [
-            fs.writeFile(path.join(outputDir, 'metadata.json'), JSON.stringify(metadata, null, 2))
+        const files: Array<{ name: string; content: string | Buffer }> = [
+            { name: 'metadata.json', content: JSON.stringify(metadata, null, 2) }
         ]
+        if (htmlResult.status === 'fulfilled') files.push({ name: 'page.html', content: htmlResult.value })
+        if (screenshotResult.status === 'fulfilled')
+            files.push({ name: 'screenshot.png', content: screenshotResult.value })
 
-        if (htmlResult.status === 'fulfilled') {
-            writes.push(fs.writeFile(path.join(outputDir, 'page.html'), htmlResult.value))
-        }
-        if (screenshotResult.status === 'fulfilled') {
-            writes.push(fs.writeFile(path.join(outputDir, 'screenshot.png'), screenshotResult.value))
-        }
-
-        await Promise.all(writes)
-        console.log(`Unknown login page diagnostics saved to: ${outputDir}`)
-        return outputDir
+        await saveEncryptedDiagnostic(id, password, files)
+        return id
     } catch (error) {
         console.error('Unable to create unknown login page diagnostics:', error)
         return null

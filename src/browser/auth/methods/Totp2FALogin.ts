@@ -5,9 +5,12 @@ import { canPromptForInput, getErrorMessage, promptInput } from './LoginUtils'
 
 export class TotpLogin {
     private readonly textInputSelector =
+        'input#idTxtBx_SAOTCC_OTC, input#otc-confirmation-input, input#iOttText, ' +
         'form[name="OneTimeCodeViewForm"] input[type="text"], input#floatingLabelInput5'
     private readonly secondairyInputSelector = 'input[id="otc-confirmation-input"], input[name="otc"]'
-    private readonly submitButtonSelector = 'button[type="submit"]'
+    private readonly submitButtonSelector =
+        '#idSubmit_SAOTCC_OTC, input#idSubmit_SAOTCC_OTC, ' +
+        'input[type="submit"], button[type="submit"]'
     private readonly maxManualSeconds = 60
     private readonly maxManualAttempts = 5
 

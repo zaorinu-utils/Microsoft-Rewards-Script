@@ -75,6 +75,8 @@ export class Login {
         passwordlessNumber: '[data-testid="displaySign"]',
         totpInput: 'input[name="otc"]',
         totpInputOld: 'form[name="OneTimeCodeViewForm"]',
+        totpConfirmInput:
+            'input#idTxtBx_SAOTCC_OTC, input#otc-confirmation-input, input#iOttText, input[name="otc"]',
         identityBanner: '[data-testid="identityBanner"]',
         otpCodeEntry: '[data-testid="codeEntry"]',
         backButton: '#back-button',
@@ -168,7 +170,7 @@ export class Login {
 
             await this.finalizeLogin(page, account)
         } catch (error) {
-            this.bot.logger.error(
+            await this.bot.logger.error(
                 this.bot.isMobile,
                 'LOGIN',
                 `Fatal error: ${error instanceof Error ? error.message : String(error)}`
@@ -200,6 +202,17 @@ export class Login {
             return 'LOGGED_IN'
         }
 
+        if (
+            hostname === 'account.live.com' &&
+            url.pathname.toLowerCase().startsWith('/identity/confirm')
+        ) {
+            const confirmInputVisible = await this.checkSelector(page, this.selectors.totpConfirmInput)
+            if (confirmInputVisible) {
+                this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'Microsoft identity confirmation code input found')
+                return '2FA_TOTP'
+            }
+        }
+
         // Page/state selectors are checked together; page-specific routing is resolved below by priority
         const stateChecks: Array<[string, LoginState]> = [
             [this.selectors.errorAlert, 'ERROR_ALERT'],
@@ -217,6 +230,7 @@ export class Login {
             [this.selectors.passwordlessNumber, 'LOGIN_PASSWORDLESS'],
             [this.selectors.totpInput, '2FA_TOTP'],
             [this.selectors.totpInputOld, '2FA_TOTP'],
+            [this.selectors.totpConfirmInput, '2FA_TOTP'],
             [this.selectors.otpCodeEntry, 'OTP_CODE_ENTRY'],
             [this.selectors.otpInput, 'OTP_CODE_ENTRY']
         ]
@@ -469,7 +483,7 @@ export class Login {
             case 'ERROR_ALERT': {
                 const alertEl = page.locator(this.selectors.errorAlert)
                 const errorMsg = await alertEl.innerText().catch(() => 'Unknown Error')
-                this.bot.logger.error(this.bot.isMobile, 'LOGIN', `Account error: ${errorMsg}`)
+                await this.bot.logger.error(this.bot.isMobile, 'LOGIN', `Account error: ${errorMsg}`)
                 throw new Error(`Microsoft login error: ${errorMsg}`)
             }
 
@@ -866,7 +880,8 @@ export class Login {
                 if (this.bot.config.errorDiagnostics && !this.capturedUnknownUrls.has(rawUrl)) {
                     this.capturedUnknownUrls.add(rawUrl)
                     await unknownPageDiagnostic(page, {
-                        platform: this.bot.isMobile ? 'mobile' : 'desktop'
+                        platform: this.bot.isMobile ? 'mobile' : 'desktop',
+                        password: this.bot.config.diagnosticsPassword
                     })
                 }
                 return true

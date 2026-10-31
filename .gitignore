@@ -1,12 +1,4 @@
-sessions/
-dist/
-.dev/
 node_modules/
-/config.json
-/.vscode
-/diagnostics
-note
-.DS_Store
-.playwright-chromium-installed
-.stfolder/
+dist/
 .env
+workspace/

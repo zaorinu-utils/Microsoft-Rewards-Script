@@ -5,6 +5,7 @@ import type { MicrosoftRewardsBot } from '../index'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
 import type { LogFilter } from '../interface/Config'
 import { terminalDashboard } from '../interface/TerminalDashboard'
+import { createErrorReference } from '../constants/errorWords'
 
 export type Platform = boolean | 'main'
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
@@ -40,18 +41,12 @@ function consoleOut(level: LogLevel, msg: string, chalkFn: ChalkFn | null): void
     }
 }
 
-function formatMessage(message: string | Error, includeStack = true): string {
-    if (!(message instanceof Error)) return message.replace(/\r?\n/g, '\\n')
-    if (!includeStack) return message.message
-
-    const stackFrames = message.stack
-        ?.split(/\r?\n/)
-        .slice(1)
-        .map(line => line.trim())
-        .filter(Boolean)
-        .join(' <- ')
-
-    return stackFrames ? `${message.message} | stack=${stackFrames}` : message.message
+function formatMessage(message: string | Error, includeStack = false): string {
+    const value = message instanceof Error ? message.message : message
+    const firstLine = value.split(/\r?\n|\\n/, 1)[0]?.trim() || (message instanceof Error ? message.name : '')
+    if (!includeStack) return firstLine
+    if (message instanceof Error) return message.stack?.trim() || `${message.name}: ${message.message}`
+    return message.replace(/\r?\n/g, '\n')
 }
 
 export class Logger {
@@ -65,7 +60,7 @@ export class Logger {
         return this.baseLog('warn', isMobile, title, message, color)
     }
 
-    error(isMobile: Platform, title: string, message: string | Error, color?: ColorKey) {
+    error(isMobile: Platform, title: string, message: string | Error, color?: ColorKey): Promise<void> {
         return this.baseLog('error', isMobile, title, message, color)
     }
 
@@ -73,19 +68,20 @@ export class Logger {
         return this.baseLog('debug', isMobile, title, message, color)
     }
 
-    private baseLog(
+    private async baseLog(
         level: LogLevel,
         isMobile: Platform,
         title: string,
         message: string | Error,
         color?: ColorKey
-    ): void {
+    ): Promise<void> {
         const config = this.bot.config
-        if (level === 'debug' && !config.debugLogs && !process.argv.includes('-dev')) return
+        const developmentMode = process.argv.includes('-dev')
+        if (level === 'debug' && !config.debugLogs && !developmentMode) return
 
         const now = new Date().toLocaleString()
-        const formatted = formatMessage(message)
-        const displayMessage = formatMessage(message, process.argv.includes('-dev') || !process.stdout.isTTY)
+        const formatted = formatMessage(message, developmentMode)
+        const displayMessage = formatMessage(message, developmentMode)
         const userName = this.bot.userData.userName || 'MAIN'
         const levelTag = level.toUpperCase()
         const cleanMsg = `[${now}] [${userName}] [${levelTag}] ${platformText(isMobile)} [${title}] ${formatted}`
@@ -93,11 +89,13 @@ export class Logger {
         if (level === 'error' && config.errorDiagnostics) {
             const page = this.bot.isMobile ? this.bot.mainMobilePage : this.bot.mainDesktopPage
             const error = message instanceof Error ? message : new Error(String(message))
-            errorDiagnostic(page, error)
+            await errorDiagnostic(page, error, config.diagnosticsPassword)
         }
 
-        const consoleAllowed = this.shouldPassFilter(config.consoleLogFilter, level, cleanMsg)
-        const webhookAllowed = this.shouldPassFilter(config.webhook.webhookLogFilter, level, cleanMsg)
+        const consoleAllowed = developmentMode || this.shouldPassFilter(config.consoleLogFilter, level, cleanMsg)
+        const webhookAllowed =
+            developmentMode ||
+            this.shouldPassFilter(config.webhook.webhookLogFilter, level, cleanMsg)
 
         if (consoleAllowed) {
             let logColor: ColorKey | undefined = color
@@ -107,6 +105,11 @@ export class Logger {
                 else if (level === 'debug') logColor = 'magenta'
             }
 
+            if (developmentMode) {
+                consoleOut(level, cleanMsg, getColorFn(logColor))
+                return this.sendWebhook(webhookAllowed, config, cleanMsg, level)
+            }
+
             const displayedLog = terminalDashboard.writeLog(
                 level,
                 userName,
@@ -114,12 +117,24 @@ export class Logger {
                 `${platformText(isMobile)} ${displayMessage}`
             )
             if (!displayedLog) {
-                const consoleStr = `[${now}] [${userName}] [${levelTag}] ${platformBadge(isMobile)} [${title}] ${displayMessage}`
+                const detail = level === 'error' && !developmentMode
+                    ? `${displayMessage} [Reference: ${createErrorReference(message)}]`
+                    : displayMessage
+                const consoleStr = `[${now}] [${userName}] [${levelTag}] ${platformBadge(isMobile)} [${title}] ${detail}`
                 consoleOut(level, consoleStr, getColorFn(logColor))
             }
         }
 
-        if (!webhookAllowed || level === 'debug') return
+        this.sendWebhook(webhookAllowed, config, cleanMsg, level)
+    }
+
+    private sendWebhook(
+        webhookAllowed: boolean,
+        config: MicrosoftRewardsBot['config'],
+        cleanMsg: string,
+        level: LogLevel
+    ): void {
+        if (!webhookAllowed || (level === 'debug' && !process.argv.includes('-dev'))) return
 
         const hasWebhook = Boolean(config.webhook.discord?.enabled && config.webhook.discord.url)
         if (!hasWebhook) return

@@ -95,14 +95,10 @@ export function loadEnvFile(projectRoot) {
 }
 
 export function loadConfigSafe(projectRoot) {
-    const candidates = [
-        path.join(projectRoot, 'config.json'),
-        path.join(projectRoot, 'dist', 'config.json'),
-        path.join(projectRoot, 'src', 'config.json'),
-        path.resolve(process.cwd(), 'config.json')
-    ]
-    for (const p of candidates) {
-        if (!fs.existsSync(p)) continue
+    const isDevelopment =
+        process.env.MRS_ENV === 'development' || process.argv.includes('-dev') || process.argv.includes('--dev')
+    const p = path.join(projectRoot, 'workspace', isDevelopment ? 'config.dev.json' : 'config.json')
+    if (fs.existsSync(p)) {
         try {
             return { data: JSON.parse(fs.readFileSync(p, 'utf8')), path: p }
         } catch (error) {

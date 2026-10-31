@@ -1,8 +1,8 @@
 {
-    "sessionPath": "sessions",
-    "headless": false,
+    "sessionPath": "workspace/sessions",
+    "headless": true,
     "clusters": 1,
-    "errorDiagnostics": false,
+    "errorDiagnostics": true,
     "ensureStreakProtection": true,
     "autoClaimPunchcardRewards": false,
     "continueOnBotWarning": false,
@@ -43,17 +43,17 @@
             "rss.googleTrends",
             "rss.googleNews",
             "rss.bbc",
-            "rss.guardian.world",
-            "rss.theVerge.all"
+            "rss.guardian.news",
+            "rss.guardian.theverge"
         ],
         "searchResultVisitTime": "10sec",
         "searchDelay": {
-            "min": "30sec",
-            "max": "1min"
+            "min": "1min",
+            "max": "2min"
         },
         "readDelay": {
-            "min": "30sec",
-            "max": "1min"
+            "min": "1sec",
+            "max": "3sec"
         }
     },
     "experimental": {
@@ -67,8 +67,7 @@
         "enabled": false,
         "mode": "whitelist",
         "levels": ["error", "warn"],
-        "keywords": ["starting account", "Fraud_UserWarning_BotScore_UX"],
-        "regexPatterns": []
+        "keywords": ["starting account", "Fraud_UserWarning_BotScore_UX"]
     },
     "proxy": {
         "queryEngine": true,
@@ -83,8 +82,7 @@
             "enabled": false,
             "mode": "whitelist",
             "levels": ["error"],
-            "keywords": ["starting account", "select number", "collected", "Fraud_UserWarning_BotScore_UX"],
-            "regexPatterns": []
+            "keywords": ["starting account", "collected"]
         }
     }
 }

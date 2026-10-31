@@ -3,6 +3,7 @@ export interface Config {
     headless: boolean
     clusters: number
     errorDiagnostics: boolean
+    diagnosticsPassword: string
     ensureStreakProtection: boolean
     autoClaimPunchcardRewards: boolean
     continueOnBotWarning: boolean
@@ -88,4 +89,3 @@ export interface WebhookDiscordConfig {
     enabled: boolean
     url: string
 }
-
