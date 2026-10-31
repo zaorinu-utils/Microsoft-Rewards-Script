@@ -5,13 +5,16 @@ import { randomBytes } from 'node:crypto'
 
 import type { Account } from '../interface/Account'
 import type { Config } from '../interface/Config'
-import defaultConfig from '../constants/defaultConfig.json'
+import appConfig from '../constants/appConfig.json'
 import { validateAccounts, validateConfig } from './Validator'
+import { getDataDirectory, getWorkspaceDirectory, isSeaBuild } from './AppPaths'
 
 let configCache: Config
 let envLoaded = false
 
 function getProjectRoot(): string {
+    if (process.env.MRS_ROOT_DIR) return path.resolve(process.env.MRS_ROOT_DIR)
+    if (isSeaBuild()) return getDataDirectory()
     const cwd = process.cwd()
     if (fs.existsSync(path.join(cwd, 'package.json'))) return cwd
 
@@ -51,6 +54,16 @@ function envStr(key: string): string | undefined {
     return trimmed.length ? trimmed : undefined
 }
 
+function isDevelopmentMode(): boolean {
+    return process.env.MRS_ENV === 'development' || process.argv.includes('-dev') || process.argv.includes('--dev')
+}
+
+export function workspaceFileName(filename: string): string {
+    if (!isDevelopmentMode()) return filename
+    const extension = path.extname(filename)
+    return `${filename.slice(0, -extension.length)}.dev${extension}`
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -69,24 +82,19 @@ function resolveAccountsFile(filename: string): string {
 }
 
 function ensureWorkspaceConfig(): string {
-    const workspaceDirectory = path.join(getProjectRoot(), 'workspace')
+    const workspaceDirectory = getWorkspaceDirectory()
     fs.mkdirSync(workspaceDirectory, { recursive: true })
-    const configPath = path.join(workspaceDirectory, 'config.json')
+    const configPath = path.join(workspaceDirectory, workspaceFileName('config.json'))
     if (!fs.existsSync(configPath)) {
-        const examplePath = path.join(workspaceDirectory, 'config.example.json')
-        const seededConfig = fs.existsSync(examplePath)
-            ? JSON.parse(fs.readFileSync(examplePath, 'utf8'))
-            : { webhook: { discord: { enabled: false, url: '' }, webhookLogFilter: { enabled: false } } }
+        const development = workspaceFileName('config.json').includes('.dev.')
+        const examplePath = path.join(workspaceDirectory, 'config.json')
+        const seededConfig = development
+            ? appConfig
+            : fs.existsSync(examplePath)
+              ? JSON.parse(fs.readFileSync(examplePath, 'utf8'))
+              : appConfig
         fs.writeFileSync(configPath, `${JSON.stringify(seededConfig, null, 4)}\n`, { mode: 0o600 })
         return configPath
-    }
-
-    const existing = JSON.parse(fs.readFileSync(configPath, 'utf8')) as unknown
-    if (isRecord(existing) && isRecord(existing.webhook)) {
-        const migrated = { webhook: existing.webhook }
-        if (Object.keys(existing).length !== 1) {
-            fs.writeFileSync(configPath, `${JSON.stringify(migrated, null, 4)}\n`, { mode: 0o600 })
-        }
     }
     return configPath
 }
@@ -108,7 +116,7 @@ function ensureDiagnosticsPassword(): string {
 
 function resolveWorkspaceAccountsFile(filename?: string): string | undefined {
     if (filename) return resolveAccountsFile(filename)
-    return path.join(getProjectRoot(), 'workspace', 'accounts.txt')
+    return path.join(getProjectRoot(), 'workspace', workspaceFileName('accounts.txt'))
 }
 
 export function parseAccountsText(text: string): unknown[] {
@@ -142,7 +150,13 @@ export function parseAccountsText(text: string): unknown[] {
             if (separator < 1) throw new Error(`Invalid account setting on line ${index + 1}: ${line}`)
             const key = line.slice(0, separator).trim()
             const value = line.slice(separator + 1).trim()
-            if (key === 'email' || key === 'password' || key === 'totpSecret' || key === 'recoveryEmail' || key === 'region') {
+            if (
+                key === 'email' ||
+                key === 'password' ||
+                key === 'totpSecret' ||
+                key === 'recoveryEmail' ||
+                key === 'region'
+            ) {
                 account[key] = value
                 continue
             }
@@ -211,16 +225,14 @@ export function loadConfig(): Config {
             botOverrides = parsed
         }
 
-        const userOverrides = isRecord(overrides) && isRecord(overrides.webhook)
-            ? { webhook: overrides.webhook }
-            : {}
-        const mergedConfig = mergeConfig(mergeConfig(defaultConfig, botOverrides), userOverrides)
+        const userOverrides = isRecord(overrides) ? overrides : {}
+        const mergedConfig = mergeConfig(mergeConfig(appConfig, botOverrides), userOverrides)
         configCache = validateConfig({
             ...(isRecord(mergedConfig) ? mergedConfig : {}),
             diagnosticsPassword: ensureDiagnosticsPassword(),
-            sessionPath: defaultConfig.sessionPath,
-            headless: defaultConfig.headless,
-            clusters: defaultConfig.clusters
+            sessionPath: appConfig.sessionPath,
+            headless: appConfig.headless,
+            clusters: appConfig.clusters
         })
         return configCache
     } catch (error) {

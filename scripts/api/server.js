@@ -123,7 +123,7 @@ if (!isLoopbackHost(HOST) && !TOKEN) {
 }
 
 const RUN_HISTORY = integerSetting('API_RUN_HISTORY', envStr('API_RUN_HISTORY'), 20)
-const DIAG_DIR = envStr('API_DIAGNOSTICS_DIR') ?? path.join(projectRoot, 'diagnostics')
+const DIAG_DIR = envStr('API_DIAGNOSTICS_DIR') ?? path.join(projectRoot, 'workspace', 'diagnostics')
 
 const { command, args } = resolveRunCommand({ projectRoot })
 
@@ -487,7 +487,10 @@ const requestHandler = async (req, res) => {
 
         // conf read
         if (method === 'GET' && pathname === '/config') {
-            return sendJson(res, 200, { source: envStr('BOT_CONFIG') ? 'BOT_CONFIG' : 'defaults', config: redactSecrets(appConfig) })
+            return sendJson(res, 200, {
+                source: envStr('BOT_CONFIG') ? 'BOT_CONFIG' : 'defaults',
+                config: redactSecrets(appConfig)
+            })
         }
 
         // sched read

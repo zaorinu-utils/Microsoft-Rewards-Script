@@ -8,10 +8,10 @@ Requirements: Node.js 24 or newer, npm, Windows/Linux/macOS/WSL, and internet ac
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
-# Linux only, when Chromium reports missing system libraries:
-sudo npx playwright install-deps
 ```
+
+`npm install` installs dependencies and Chromium automatically. On Linux,
+the Chromium installer also installs system packages when npm is run as root.
 
 Run the setup wizard and build/start normally:
 
@@ -22,6 +22,15 @@ npm run start
 ```
 
 Setup creates `workspace/accounts.txt` and `workspace/config.json`. Manual login requires a graphical session to open Chromium.
+
+Run `npm run doctor` before the application to verify Node.js, accounts,
+configuration, and Chromium in one step.
+
+Use `npm run setup` for production files (`workspace/accounts.txt` and
+`workspace/config.json`). Use `npm run setup:dev` for development files
+(`workspace/accounts.dev.txt` and `workspace/config.dev.json`). `npm run dev`
+selects development files automatically. Check the development setup with
+`npm run doctor -- -dev`.
 
 ## Main Application
 
@@ -58,7 +67,10 @@ npm run build
 
 ## Troubleshooting
 
-If the browser does not start, run `npm run install:browser`. On Linux, run `sudo npx playwright install-deps` or `npm run install:browser-deps` to install Chromium system libraries. Run `npm run setup` to create accounts.
+If Chromium starts without system libraries, run `npm run doctor`. It reports
+the missing browser or executable details. On Linux, install missing system
+libraries with `npm run install:browser-deps`; this command may require your
+system administrator password. Run `npm run setup` to create accounts.
 
 If login repeats, list sessions with `npm run clear-sessions -- list`, remove only the affected account with `npm run clear-sessions -- email person@example.com`, and log in again manually. Sessions contain cookies and must not be shared.
 
@@ -77,7 +89,6 @@ internet. Em Linux, Chromium pode exigir bibliotecas de sistema adicionais.
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
 ```
 
 Execute `npm run setup` para criar `workspace/accounts.txt` e
@@ -140,8 +151,10 @@ npm run build
 
 ## Diagnóstico
 
-Se o navegador não iniciar, rode `npm run install:browser`. No Linux, execute
-`sudo npx playwright install-deps` ou `npm run install:browser-deps` para instalar as bibliotecas exigidas pelo Chromium. Para configurar contas, execute `npm run setup`.
+Se o Chromium não iniciar por falta de bibliotecas, execute `npm run doctor`.
+No Linux, instale as bibliotecas com `npm run install:browser-deps`; o comando
+pode pedir a senha do administrador. Para configurar contas, execute
+`npm run setup`.
 
 Se o login se repetir, liste sessões com `npm run clear-sessions -- list`,
 remova apenas a conta afetada com `npm run clear-sessions -- email

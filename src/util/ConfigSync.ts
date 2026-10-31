@@ -25,11 +25,26 @@ export function resolveConfigPath(projectRoot: string = getProjectRoot()): strin
 }
 
 export function resolveExamplePath(projectRoot: string = getProjectRoot()): string {
-    return path.join(projectRoot, 'workspace', 'config.example.json')
+    const candidates = [
+        path.join(projectRoot, 'dist', 'constants', 'appConfig.json'),
+        path.join(projectRoot, 'src', 'constants', 'appConfig.json')
+    ]
+    const resolved = candidates.find(filePath => fs.existsSync(filePath))
+    if (!resolved) {
+        throw new Error('Built-in configuration defaults not found. Run `npm run build` before syncing configuration.')
+    }
+    return resolved
 }
 
 export function readJson(filePath: string): unknown {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+}
+
+export function getUserConfigTemplate(appConfig: unknown): unknown {
+    if (!isPlainObject(appConfig) || !Object.prototype.hasOwnProperty.call(appConfig, 'webhook')) {
+        return {}
+    }
+    return { webhook: appConfig.webhook }
 }
 
 export function writeConfigAtomic(
@@ -110,7 +125,10 @@ export function syncConfig(opts: SyncOptions = {}): SyncReport {
     const examplePath = opts.examplePath ?? resolveExamplePath(projectRoot)
 
     fs.mkdirSync(path.dirname(configPath), { recursive: true })
-    const example = fs.existsSync(examplePath) ? readJson(examplePath) : { webhook: {} }
+    const exampleFile = fs.existsSync(examplePath) ? readJson(examplePath) : { webhook: {} }
+    const example = examplePath.endsWith('appConfig.json')
+        ? getUserConfigTemplate(exampleFile)
+        : exampleFile
 
     // No config.json (or an empty stub) yet -> seed it from the example.
     if (!fs.existsSync(configPath) || fs.statSync(configPath).size < 10) {
@@ -144,15 +162,15 @@ Usage:
   node dist/util/ConfigSync.js sync [--config <path>] [--example <path>] [--patch]
 
 Options:
-  --config     Path to config.json. Defaults to the project config.
-    --example    Path to workspace/config.example.json. Defaults to the workspace configuration.
+  --config     Runtime config path. Defaults to workspace/config.json.
+  --example    Built-in defaults used as the template reference.
   --patch      Add missing defaults to config.json and create a backup.
   --help       Show this help.
 
 Examples:
   node dist/util/ConfigSync.js sync
   node dist/util/ConfigSync.js sync --patch
-    node dist/util/ConfigSync.js sync --config ./workspace/config.json --example ./workspace/config.example.json
+  node dist/util/ConfigSync.js sync --config ./workspace/config.custom.json
 `)
     }
 
@@ -211,7 +229,7 @@ Examples:
             console.warn('')
             console.warn('┌──────────────────────────────────────────────────────────┐')
             console.warn('│  ⚠  CONFIG UPDATE AVAILABLE                              │')
-            console.warn('│  Missing keys (see workspace/config.example.json for defaults): │')
+            console.warn('│  Missing keys (see workspace/config.json for defaults): │')
             report.addedKeys.forEach(k => console.warn(('│    + ' + k).padEnd(60) + '│'))
             console.warn('│  Set CONFIG_AUTO_SYNC=true to patch automatically, or    │')
             console.warn('│  delete config.json to regenerate it from scratch.       │')

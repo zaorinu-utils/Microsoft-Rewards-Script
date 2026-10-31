@@ -12,7 +12,7 @@ Each run restores or creates the browser session, authenticates when necessary, 
 - `.env` contains credentials and account-specific options.
 - `config.json` contains application preferences and is created from the example only when it does not exist.
 - `config/schedule.json` stores the schedule persisted by the control API.
-- `diagnostics/` receives error captures when diagnostics are enabled.
+- `workspace/diagnostics/` receives error captures when diagnostics are enabled.
 
 Sessions contain authentication cookies. Treat them as sensitive data, keep them private, and remove records only through the provided commands.
 
@@ -40,7 +40,7 @@ Ctrl+C and SIGTERM initiate cleanup. The bot flushes notification queues and clo
 | `scripts/main/`                | Manual login and session commands                        |
 | `scripts/api/`                 | HTTP API, process execution, and scheduling              |
 
-To add an application preference, update `src/constants/defaultConfig.json`, its type in `src/interface/Config.ts`, and its schema in `src/util/Validator.ts`. Account fields belong in `workspace/accounts.txt` and are mapped in `src/util/Load.ts`. Change an activity in its group under `src/functions/activities/`; use `src/functions/Activities.ts` to dispatch it and `src/index.ts` to adjust when it runs. Search sources belong in `src/functions/QueryEngine.ts`, and RSS feeds in `src/constants/rssFeeds.ts`.
+To add an application preference, update `src/constants/appConfig.json`, its type in `src/interface/Config.ts`, and its schema in `src/util/Validator.ts`. User-facing overrides belong in `workspace/config.json`. Account fields belong in `workspace/accounts.txt` and are mapped in `src/util/Load.ts`. Change an activity in its group under `src/functions/activities/`; use `src/functions/Activities.ts` to dispatch it; and `src/index.ts` to adjust when it runs. Search sources belong in `src/functions/QueryEngine.ts`, and RSS feeds in `src/constants/rssFeeds.ts`.
 
 # Arquitetura
 
@@ -64,7 +64,7 @@ conta quando possível para permitir que as seguintes continuem.
 - `.env` contém credenciais e opções específicas das contas.
 - `config.json` contém preferências e é criado do exemplo apenas se ausente.
 - `config/schedule.json` contém agenda persistida pela API de controle.
-- `diagnostics/` recebe capturas de erro quando os diagnósticos estão ativos.
+- `workspace/diagnostics/` recebe capturas de erro quando os diagnósticos estão ativos.
 
 As sessões contêm cookies de autenticação. Trate-as como dados sensíveis,
 mantenha-as privadas e remova registros apenas por meio dos comandos próprios.
@@ -102,7 +102,7 @@ timer. A API também oferece endpoints explícitos para parar e reiniciar.
 | `scripts/main/`                | Login manual e comandos para sessões                    |
 | `scripts/api/`                 | API HTTP, execução de processos e agenda                |
 
-Para adicionar uma preferência, atualize `src/constants/defaultConfig.json`, o tipo
+Para adicionar uma preferência, atualize `src/constants/appConfig.json`, o tipo
 em `src/interface/Config.ts` e o schema em `src/util/Validator.ts`. Campos de
 conta pertencem a `workspace/accounts.txt` e são mapeados em `src/util/Load.ts`.
 Altere uma atividade no seu grupo em `src/functions/activities/`; use

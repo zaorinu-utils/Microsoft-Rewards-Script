@@ -4,7 +4,7 @@ Application preferences are maintained internally by the bot. `workspace/config.
 
 Account-specific data lives in `workspace/accounts.txt` and is written by `npm run setup`. The workspace directory is Git ignored; do not commit passwords, TOTP secrets, API tokens, or webhook credentials.
 
-The password used for protected login and error dumps is configured by `diagnosticsPassword` in `workspace/config.json`. Each dump is saved as one `diagnostics/<reference-id>.rrdump` ZIP archive containing `dump.html`, `screenshot.png`, and `error.txt`. Error dumps are enabled by default with `errorDiagnostics: true`.
+The password for protected login and error dumps is generated locally at runtime and stored in `workspace/.diagnostics-password`. Each dump is saved as one `workspace/diagnostics/<reference-id>.rrdump` ZIP archive containing `dump.html`, `screenshot.png`, and `error.txt`. Error dumps are enabled by default with `errorDiagnostics: true`.
 
 ## Accounts
 
@@ -27,7 +27,7 @@ Keep these options in `config.json`; there are no `CONFIG_*` environment variabl
 
 | Section                                                                | Purpose                                                               |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `sessionPath`, `headless`, `clusters`, `accountDelay`, `globalTimeout` | Storage, browser visibility, concurrency, and timeouts                |
+| Application internals                                                   | Storage, browser visibility, concurrency, and timeouts               |
 | `workers`                                                              | Enable or disable individual workflows                                |
 | `activities`                                                           | URL Reward and Explore on Bing activities                             |
 | `searchSettings`                                                       | Query sources, intervals, result interaction, and concurrency         |
@@ -36,7 +36,7 @@ Keep these options in `config.json`; there are no `CONFIG_*` environment variabl
 | `consoleLogFilter`, `debugLogs`, `errorDiagnostics`                    | Console output and diagnostics                                        |
 | `webhook`                                                              | Discord, ntfy, Telegram, and notification filters                     |
 
-Durations accept numeric milliseconds or strings such as `30sec` and `1min`. For intervals, `max` must be greater than or equal to `min`. Query sources include `google`, `wikipedia`, `wikirandom`, `hackernews`, `reddit`, and configured RSS feeds. Queries come from these external sources; if none respond, search is skipped rather than using a local fallback list. Defaults are in [`src/constants/defaultConfig.json`](../src/constants/defaultConfig.json).
+Durations accept numeric milliseconds or strings such as `30sec` and `1min`. For intervals, `max` must be greater than or equal to `min`. Query sources include `google`, `wikipedia`, `wikirandom`, `hackernews`, `reddit`, and configured RSS feeds. Queries come from these external sources; if none respond, search is skipped rather than using a local fallback list. Internal defaults are in [`src/constants/appConfig.json`](../src/constants/appConfig.json).
 
 The distributed example sets `headless` to `false`. Use headless mode on servers without a graphical environment.
 
@@ -85,7 +85,7 @@ intervalos, `max` deve ser maior ou igual a `min`. Fontes de consulta incluem
 `google`, `wikipedia`, `wikirandom`, `hackernews`, `reddit` e feeds RSS
 configurados. As consultas vêm dessas fontes externas; se nenhuma responder, a
 execução de busca é ignorada, sem lista local de reserva. Os valores padrão estão em
-[`src/constants/defaultConfig.json`](../src/constants/defaultConfig.json).
+[`src/constants/appConfig.json`](../src/constants/appConfig.json).
 
 O padrão distribuído define `headless` como `true`. Use o modo gráfico no workspace quando precisar acompanhar a janela do navegador.
 

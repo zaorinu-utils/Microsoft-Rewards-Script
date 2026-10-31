@@ -16,10 +16,9 @@ A TypeScript application that runs Microsoft Rewards workflows in a browser. It 
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
-# Linux only, when Chromium reports missing system libraries:
-sudo npx playwright install-deps
 ```
+
+`npm install` installs the dependencies and Chromium automatically.
 
 Run the setup wizard, then build and start the application:
 
@@ -28,6 +27,14 @@ npm run setup
 npm run build
 npm run start
 ```
+
+Before starting, run `npm run doctor` to check Node.js, accounts, configuration,
+and the installed Chromium browser. The command reports each prerequisite
+without opening the application.
+
+Production uses `workspace/accounts.txt` and `workspace/config.json`. Development
+uses `workspace/accounts.dev.txt` and `workspace/config.dev.json`; create them
+with `npm run setup:dev`. Test credentials stay separate from real accounts.
 
 The wizard creates `workspace/config.json` and `workspace/accounts.txt`. Keep those files local; the workspace is ignored by Git. See the [usage and installation guide](docs/usage.md) and [configuration guide](docs/configuration.md).
 
@@ -73,9 +80,6 @@ API local opcional e notificações por Discord, ntfy ou Telegram.
 git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
-npm run install:browser
-# Linux only, when Chromium reports missing system libraries:
-sudo npx playwright install-deps
 ```
 
 Execute o setup, compile e inicie o aplicativo:

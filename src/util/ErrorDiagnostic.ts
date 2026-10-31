@@ -6,6 +6,7 @@ import { promisify } from 'util'
 import { randomInt } from 'crypto'
 import type { Page } from 'patchright'
 import { createErrorReference } from '../constants/errorWords'
+import { getWorkspaceDirectory } from './AppPaths'
 
 const execFileAsync = promisify(execFile)
 const scheduledErrorDiagnostics = new Set<string>()
@@ -53,7 +54,7 @@ async function saveEncryptedDiagnostic(
 ): Promise<string | null> {
     if (!password) return null
 
-    const diagnosticsDirectory = path.join(process.cwd(), 'diagnostics')
+    const diagnosticsDirectory = path.join(getWorkspaceDirectory(), 'diagnostics')
     const archivePath = path.join(diagnosticsDirectory, `${id}.rrdump`)
     const temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'rewards-diagnostic-'))
 
@@ -155,7 +156,8 @@ export async function unknownPageDiagnostic(
             { name: 'metadata.json', content: JSON.stringify(metadata, null, 2) }
         ]
         if (htmlResult.status === 'fulfilled') files.push({ name: 'page.html', content: htmlResult.value })
-        if (screenshotResult.status === 'fulfilled') files.push({ name: 'screenshot.png', content: screenshotResult.value })
+        if (screenshotResult.status === 'fulfilled')
+            files.push({ name: 'screenshot.png', content: screenshotResult.value })
 
         await saveEncryptedDiagnostic(id, password, files)
         return id

@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import type { BrowserContext } from 'patchright'
+import { getDataDirectory } from './AppPaths'
 
 export type StorageState = Awaited<ReturnType<BrowserContext['storageState']>>
 
@@ -42,7 +43,7 @@ function removeExpiredCookies(storageState: StorageState): {
 function getDb(sessionPath: string): DatabaseSync {
     if (db) return db
 
-    const dir = path.resolve(process.cwd(), sessionPath)
+    const dir = path.resolve(getDataDirectory(), sessionPath)
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
     try {
         fs.chmodSync(dir, 0o700)

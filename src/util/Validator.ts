@@ -2,7 +2,7 @@ import { z } from 'zod'
 import semver from 'semver'
 import ms, { StringValue } from 'ms'
 import pkg from '../../package.json'
-import defaultConfigJson from '../constants/defaultConfig.json'
+import appConfigJson from '../constants/appConfig.json'
 
 import { Config } from '../interface/Config'
 import { Account } from '../interface/Account'
@@ -201,7 +201,10 @@ export const AccountSchema = z.object({
     proxy: AccountProxySchema.default({ proxyHttp: false, url: '', port: 0, password: '', username: '' })
 })
 
-const defaultConfig = ConfigSchema.parse(defaultConfigJson)
+const defaultConfig = ConfigSchema.parse({
+    ...appConfigJson,
+    diagnosticsPassword: 'runtime-generated'
+})
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v)

@@ -8,6 +8,7 @@
         "node": ">=24.0.0"
     },
     "scripts": {
+        "postinstall": "node ./scripts/install-browser.js",
         "install:browser": "npx patchright install chromium",
         "install:browser-deps": "npx patchright install-deps chromium",
         "build": "rimraf dist && tsc",
@@ -15,6 +16,9 @@
         "ts-start": "ts-node ./src/index.ts",
         "dev": "ts-node ./src/index.ts -dev",
         "setup": "node ./scripts/setup.js",
+        "setup:dev": "node ./scripts/setup.js -dev",
+        "doctor": "node ./scripts/doctor.js",
+        "config:sync": "npm run build --silent && node ./dist/util/ConfigSync.js sync",
         "api": "node ./scripts/api/server.js",
         "dashboard": "npm run build --silent && node --env-file-if-exists=.env ./scripts/dashboard-cli.js",
         "dashboard:demo": "npm run build --silent && node ./scripts/dashboard-cli.js --demo",
@@ -25,7 +29,7 @@
         "test:log-parser": "node --test scripts/api/logParser.test.js",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "clear-diagnostics": "rimraf diagnostics",
+        "clear-diagnostics": "rimraf workspace/diagnostics",
         "clear-sessions": "node ./scripts/main/clearSessions.js",
         "manual-login": "node ./scripts/main/manualLogin.js",
         "open-session": "node ./scripts/main/browserSession.js -email"

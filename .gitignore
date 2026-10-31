@@ -10,9 +10,9 @@ note
 .playwright-chromium-installed
 .stfolder/
 .env
-accounts.txt
-config.json
+
+# Local workspace credentials and runtime files.
 /workspace/*
 !/workspace/
-!/workspace/accounts.example.txt
-!/workspace/config.example.json
+!/workspace/accounts.txt
+!/workspace/config.json

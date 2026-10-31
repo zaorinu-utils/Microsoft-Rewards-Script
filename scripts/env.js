@@ -27,6 +27,15 @@ export function envInt(key, fallback, sourceEnv = process.env) {
     return Number.isFinite(parsed) ? parsed : fallback
 }
 
+function isDevelopmentMode(sourceEnv = process.env) {
+    return sourceEnv.MRS_ENV === 'development' || process.argv.includes('-dev') || process.argv.includes('--dev')
+}
+
+export function workspaceAccountsFile(projectRoot, sourceEnv = process.env) {
+    const filename = isDevelopmentMode(sourceEnv) ? 'accounts.dev.txt' : 'accounts.txt'
+    return path.join(projectRoot, 'workspace', filename)
+}
+
 export function parseAccountsText(text) {
     const blocks = []
     let current = []
@@ -37,6 +46,7 @@ export function parseAccountsText(text) {
                 blocks.push(current.join('\n'))
                 current = []
             }
+
             continue
         }
         if (rawLine.trimStart().startsWith('#')) continue
@@ -59,7 +69,10 @@ export function parseAccountsText(text) {
 }
 
 export function parseAccountsJson(sourceEnv = process.env) {
-    const accountsFile = path.resolve(process.cwd(), envStrFrom(sourceEnv, 'ACCOUNTS_FILE') || 'workspace/accounts.txt')
+    const accountsFile = path.resolve(
+        process.cwd(),
+        envStrFrom(sourceEnv, 'ACCOUNTS_FILE') || workspaceAccountsFile(process.cwd(), sourceEnv)
+    )
     if (!fs.existsSync(accountsFile)) return []
     return parseAccountsText(fs.readFileSync(accountsFile, 'utf8'))
 }

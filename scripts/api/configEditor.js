@@ -3,7 +3,9 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 function resolveConfigPath(projectRoot) {
-    return path.join(projectRoot, 'workspace', 'config.json')
+    const isDevelopment =
+        process.env.MRS_ENV === 'development' || process.argv.includes('-dev') || process.argv.includes('--dev')
+    return path.join(projectRoot, 'workspace', isDevelopment ? 'config.dev.json' : 'config.json')
 }
 
 async function loadConfigSync(projectRoot, override) {
@@ -115,10 +117,7 @@ function structuralValidate(cfg) {
             errors.push('searchSettings must be an object')
         } else {
             const search = cfg.searchSettings
-            for (const key of [
-                'parallelSearching',
-                'clusterSearch'
-            ]) {
+            for (const key of ['parallelSearching', 'clusterSearch']) {
                 if (key in search && typeof search[key] !== 'boolean') {
                     errors.push(`searchSettings.${key} must be a boolean`)
                 }
@@ -222,7 +221,8 @@ export async function diffConfig(projectRoot, { validatorModule } = {}) {
     const mod = await loadConfigSync(projectRoot, validatorModule)
     if (!mod) throw new Error('ConfigSync module not found - run `npm run build`.')
     const { data: config } = readConfig(projectRoot)
-    const example = mod.readJson(mod.resolveExamplePath(projectRoot))
+    const exampleFile = mod.readJson(mod.resolveExamplePath(projectRoot))
+    const example = mod.getUserConfigTemplate(exampleFile)
     return { addedKeys: mod.diffKeyPaths(config, example) }
 }
 
@@ -230,7 +230,8 @@ export async function syncMissingDefaults(projectRoot, { validatorModule } = {})
     const mod = await loadConfigSync(projectRoot, validatorModule)
     if (!mod) throw new Error('ConfigSync module not found - run `npm run build`.')
     const { data: config } = readConfig(projectRoot)
-    const example = mod.readJson(mod.resolveExamplePath(projectRoot))
+    const exampleFile = mod.readJson(mod.resolveExamplePath(projectRoot))
+    const example = mod.getUserConfigTemplate(exampleFile)
     const { merged, addedKeys } = mod.mergeMissingDefaults(config, example)
     if (addedKeys.length > 0) {
         writeConfigAtomic(projectRoot, merged)
