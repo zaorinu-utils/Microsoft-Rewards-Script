@@ -113,7 +113,7 @@ ${error.stack || 'No stack trace available'}
         files.push({ name: 'error.txt', content: errorLog })
 
         return await saveEncryptedDiagnostic(id, password, files)
-    } catch (error) {
+    } catch {
         return null
     }
 }
