@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 
 import { getWorkspaceDirectory, isSeaBuild } from './AppPaths'
 
@@ -50,4 +51,27 @@ export function runOnboarding(): void {
     if (!isSeaBuild()) return
     fs.mkdirSync(path.join(workspaceDirectory, 'sessions'), { recursive: true })
     fs.mkdirSync(path.join(workspaceDirectory, 'diagnostics'), { recursive: true })
+}
+
+export function runOnboardingIfNeeded(): void {
+    runOnboarding()
+    if (process.env.MRS_SETUP_SKIPPED === '1') return
+    if (process.env.MRS_ENV === 'development' || process.argv.includes('-dev') || process.argv.includes('--dev')) return
+
+    const workspaceDirectory = getWorkspaceDirectory()
+    const accountsPath = path.join(workspaceDirectory, 'accounts.txt')
+    const contents = fs.existsSync(accountsPath) ? fs.readFileSync(accountsPath, 'utf8') : ''
+    const hasAccount = /^email:\s*\S+@\S+/m.test(contents)
+    if (hasAccount) return
+
+    const setupPath = path.join(process.cwd(), 'scripts', 'setup.js')
+    if (!fs.existsSync(setupPath)) return
+    const result = spawnSync(process.execPath, [setupPath], {
+        stdio: 'inherit',
+        env: {
+            ...process.env,
+            MRS_DATA_DIR: getWorkspaceDirectory().replace(/[\\\\/]workspace$/, '')
+        }
+    })
+    if (result.status !== 0) process.exit(result.status ?? 1)
 }

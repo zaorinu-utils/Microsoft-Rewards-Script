@@ -34,6 +34,10 @@ selects development files automatically. Check the development setup with
 The setup wizard asks for a Discord webhook URL. Leave it empty to disable
 notifications; otherwise, it sends a test message and retries until the URL
 works.
+Use the numbered menu to add or remove accounts and review the current setup
+without exposing passwords. If production files are missing when the app
+starts, the same wizard runs automatically and the app continues when setup
+is completed.
 
 ## Main Application
 

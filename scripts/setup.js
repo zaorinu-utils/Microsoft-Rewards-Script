@@ -3,13 +3,12 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 
-function accountsInFile(accountsText) {
-    const emails = []
-    for (const match of accountsText.matchAll(/^email:\s*(.+)$/gm)) {
-        emails.push(match[1].trim().toLowerCase())
-    }
-    return new Set(emails)
-}
+const BANNER = `
+╔══════════════════════════════════════════╗
+║      MICROSOFT REWARDS SCRIPT            ║
+║              SETUP                       ║
+╚══════════════════════════════════════════╝
+`
 
 function validEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -29,6 +28,49 @@ function readUserConfigDefault() {
     const appConfigPath = path.resolve('src', 'constants', 'appConfig.json')
     const appConfig = JSON.parse(fs.readFileSync(appConfigPath, 'utf8'))
     return { webhook: appConfig.webhook }
+}
+
+function readAccounts(filePath) {
+    if (!fs.existsSync(filePath)) return []
+    return fs.readFileSync(filePath, 'utf8')
+        .replace(/\r/g, '')
+        .split(/\n\s*\n/)
+        .map(block => block.trim())
+        .filter(block => block && !block.startsWith('#'))
+        .map(block => {
+            const values = {}
+            for (const line of block.split('\n')) {
+                const separator = line.indexOf(':')
+                if (separator > 0) values[line.slice(0, separator).trim()] = line.slice(separator + 1).trim()
+            }
+            return values
+        })
+        .filter(account => account.email && account.password)
+}
+
+function writeAccounts(filePath, accounts) {
+    const text = accounts.map(account => [
+        `email: ${account.email}`,
+        `password: ${account.password}`,
+        ...(account.totpSecret ? [`totpSecret: ${account.totpSecret}`] : [])
+    ].join('\n')).join('\n\n')
+    fs.writeFileSync(filePath, text ? `${text}\n` : '', { mode: 0o600 })
+    fs.chmodSync(filePath, 0o600)
+}
+
+function printSummary(accounts, config) {
+    const discord = config.webhook?.discord
+    output.write('\nCurrent setup:\n')
+    output.write(`Accounts: ${accounts.length}\n`)
+    accounts.forEach((account, index) => {
+        output.write(`  ${index + 1}. ${account.email}\n`)
+    })
+    output.write(`Webhook: ${discord?.enabled && discord.url ? 'configured' : 'disabled'}\n`)
+    output.write('\n')
+}
+
+function printHeader() {
+    output.write(`${BANNER}\n`)
 }
 
 async function validateDiscordWebhook(url) {
@@ -104,7 +146,8 @@ async function promptSecret(rl, question) {
 }
 
 async function main() {
-    const workspaceDirectory = path.resolve('workspace')
+    const dataDirectory = process.env.MRS_DATA_DIR ? path.resolve(process.env.MRS_DATA_DIR) : process.cwd()
+    const workspaceDirectory = path.join(dataDirectory, 'workspace')
     const accountsPath = path.join(workspaceDirectory, workspaceFileName('accounts.txt'))
     const configPath = path.join(workspaceDirectory, workspaceFileName('config.json'))
     fs.mkdirSync(workspaceDirectory, { recursive: true })
@@ -114,33 +157,7 @@ async function main() {
     }
 
     const rl = readline.createInterface({ input, output })
-    const accounts = []
-    const existingAccountsText = fs.existsSync(accountsPath) ? fs.readFileSync(accountsPath, 'utf8') : ''
-    const existingEmails = accountsInFile(existingAccountsText)
-
-    while (true) {
-        const email = (await rl.question('Email (leave empty to finish): ')).trim()
-        if (!email) break
-
-        if (!validEmail(email)) {
-            output.write('Enter a valid email address.\n')
-            continue
-        }
-        if (existingEmails.has(email.toLowerCase())) {
-            output.write(`Account ${email} already exists. It was not added again.\n`)
-            continue
-        }
-
-        const password = (await promptSecret(rl, 'Password: ')).trim()
-        if (!password) {
-            output.write('Password cannot be empty.\n')
-            continue
-        }
-
-        const totpSecret = (await rl.question('TOTP secret (optional): ')).trim()
-        accounts.push({ email, password, totpSecret })
-        existingEmails.add(email.toLowerCase())
-    }
+    const accounts = readAccounts(accountsPath)
 
     let config
     try {
@@ -149,51 +166,77 @@ async function main() {
         config = readUserConfigDefault()
     }
 
+    printHeader()
     while (true) {
-        const webhookUrl = (await rl.question('Discord webhook URL (leave empty to skip): ')).trim()
-        if (!webhookUrl) {
-            config.webhook ??= {}
-            config.webhook.discord ??= {}
-            config.webhook.discord.enabled = false
-            config.webhook.discord.url = ''
-            output.write('Webhook setup skipped.\n')
+        printSummary(accounts, config)
+        output.write('1. Add account\n2. Remove account\n3. Configure webhook\n4. Show summary\n5. Save and start\n')
+        const choice = (await rl.question('Choose an option: ')).trim()
+
+        if (choice === '1') {
+            const email = (await rl.question('Email: ')).trim()
+            if (!validEmail(email)) {
+                output.write('Enter a valid email address.\n')
+                continue
+            }
+            if (accounts.some(account => account.email.toLowerCase() === email.toLowerCase())) {
+                output.write('That account is already configured.\n')
+                continue
+            }
+            const password = (await promptSecret(rl, 'Password: ')).trim()
+            if (!password) {
+                output.write('Password cannot be empty.\n')
+                continue
+            }
+            const totpSecret = (await rl.question('TOTP secret (optional): ')).trim()
+            accounts.push({ email, password, ...(totpSecret ? { totpSecret } : {}) })
+        } else if (choice === '2') {
+            if (!accounts.length) {
+                output.write('There are no accounts to remove.\n')
+                continue
+            }
+            const selection = Number.parseInt(await rl.question('Account number to remove: '), 10)
+            if (!Number.isInteger(selection) || selection < 1 || selection > accounts.length) {
+                output.write('Enter a valid account number.\n')
+                continue
+            }
+            const [removed] = accounts.splice(selection - 1, 1)
+            output.write(`Removed ${removed.email}.\n`)
+        } else if (choice === '3') {
+            while (true) {
+                const webhookUrl = (await rl.question('Discord webhook URL (leave empty to disable): ')).trim()
+                if (!webhookUrl) {
+                    config.webhook ??= {}
+                    config.webhook.discord = { enabled: false, url: '' }
+                    output.write('Webhook disabled.\n')
+                    break
+                }
+                output.write('Testing webhook...\n')
+                if (await validateDiscordWebhook(webhookUrl)) {
+                    config.webhook ??= {}
+                    config.webhook.discord = { enabled: true, url: webhookUrl }
+                    output.write('Webhook is valid. Test message sent.\n')
+                    break
+                }
+                output.write('Webhook is invalid or unreachable. Please try again.\n')
+            }
+        } else if (choice === '4') {
+            printSummary(accounts, config)
+        } else if (choice === '5') {
+            if (!accounts.length) {
+                output.write('Add at least one account before starting.\n')
+                continue
+            }
             break
+        } else {
+            output.write('Enter a number from 1 to 5.\n')
         }
-        output.write('Testing webhook...\n')
-        if (await validateDiscordWebhook(webhookUrl)) {
-            config.webhook ??= {}
-            config.webhook.discord = { enabled: true, url: webhookUrl }
-            output.write('Webhook is valid. Test message sent.\n')
-            break
-        }
-        output.write('Webhook is invalid or unreachable. Please try again.\n')
     }
 
     rl.close()
-
+    writeAccounts(accountsPath, accounts)
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 4)}\n`, { mode: 0o600 })
     fs.chmodSync(configPath, 0o600)
-
-    if (accounts.length) {
-        const additions = accounts
-            .map(account =>
-                [
-                    `email: ${account.email}`,
-                    `password: ${account.password}`,
-                    ...(account.totpSecret ? [`totpSecret: ${account.totpSecret}`] : [])
-                ].join('\n')
-            )
-            .join('\n\n')
-        const existing = existingAccountsText.trim()
-        const contents = existing ? `${existing}\n\n${additions}\n` : `${additions}\n`
-        fs.writeFileSync(accountsPath, contents, { mode: 0o600 })
-        try {
-            fs.chmodSync(accountsPath, 0o600)
-        } catch {}
-        console.log(`Saved ${accounts.length} account${accounts.length === 1 ? '' : 's'} to ${accountsPath}`)
-    } else {
-        console.log('Setup cancelled. No accounts were saved.')
-    }
+    output.write('Setup complete. Starting Microsoft Rewards Script...\n')
 }
 
 main().catch(error => {
