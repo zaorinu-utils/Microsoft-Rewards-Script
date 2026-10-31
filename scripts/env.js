@@ -1,3 +1,6 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
 export function envStrFrom(sourceEnv, key) {
     const value = sourceEnv[key]
     if (value === undefined) return undefined
@@ -24,22 +27,39 @@ export function envInt(key, fallback, sourceEnv = process.env) {
     return Number.isFinite(parsed) ? parsed : fallback
 }
 
-export function parseAccountsJson(sourceEnv = process.env) {
-    const raw = envStrFrom(sourceEnv, 'ACCOUNTS_JSON')
-    if (!raw) return []
+export function parseAccountsText(text) {
+    const blocks = []
+    let current = []
 
-    let accounts
-    try {
-        accounts = JSON.parse(raw)
-    } catch (error) {
-        throw new Error(`ACCOUNTS_JSON must contain valid JSON: ${error.message}`)
-    }
-
-    if (!Array.isArray(accounts)) throw new Error('ACCOUNTS_JSON must be a JSON array.')
-    for (const [index, account] of accounts.entries()) {
-        if (!account || typeof account !== 'object' || Array.isArray(account) || typeof account.email !== 'string') {
-            throw new Error(`ACCOUNTS_JSON[${index}].email must be a string.`)
+    for (const rawLine of String(text).replace(/\r/g, '').split('\n')) {
+        if (!rawLine.trim()) {
+            if (current.length) {
+                blocks.push(current.join('\n'))
+                current = []
+            }
+            continue
         }
+        if (rawLine.trimStart().startsWith('#')) continue
+        current.push(rawLine)
     }
-    return accounts
+    if (current.length) blocks.push(current.join('\n'))
+
+    return blocks.map((block, index) => {
+        const account = { email: '', password: '' }
+        for (const line of block.split('\n')) {
+            const separator = line.indexOf(':')
+            if (separator < 1) throw new Error(`Invalid account setting on line ${index + 1}: ${line}`)
+            const key = line.slice(0, separator).trim()
+            if (key !== 'email' && key !== 'password') throw new Error(`Unknown account setting: ${key}`)
+            account[key] = line.slice(separator + 1).trim()
+        }
+        if (!account.email) throw new Error(`Account block ${index + 1} must start with email: ...`)
+        return account
+    })
+}
+
+export function parseAccountsJson(sourceEnv = process.env) {
+    const accountsFile = path.resolve(process.cwd(), envStrFrom(sourceEnv, 'ACCOUNTS_FILE') || 'workspace/accounts.txt')
+    if (!fs.existsSync(accountsFile)) return []
+    return parseAccountsText(fs.readFileSync(accountsFile, 'utf8'))
 }

@@ -1,0 +1,14 @@
+# Copy this file to workspace/accounts.txt and fill one block per account.
+# Optional: totpSecret, recoveryEmail, region, and proxy settings.
+
+email: example@domain.com
+password: your-password
+# totpSecret: abcdefghijk123
+# recoveryEmail: recovery@example.com
+# region: US
+
+# proxyHttp: true
+# proxyUrl: http://proxy.example.com
+# proxyPort: 8080
+# proxyUsername: proxy-user
+# proxyPassword: proxy-password

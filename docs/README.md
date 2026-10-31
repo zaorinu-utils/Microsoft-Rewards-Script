@@ -5,7 +5,7 @@
 - [Usage](usage.md): installation, commands, sessions, API, notifications, and troubleshooting.
 - [Control API](../scripts/api/README.md): endpoints, authentication, and examples.
 
-The [main README](../README.md) is the quick start. When behavior changes, treat the code and `config/config.example.json` as the sources of truth.
+The [main README](../README.md) is the quick start. User runtime files are stored in `workspace/`; internal defaults are in `src/constants/defaultConfig.json`.
 
 # Documentação
 
@@ -15,4 +15,4 @@ The [main README](../README.md) is the quick start. When behavior changes, treat
 - [API de controle](../scripts/api/README.md): endpoints, autenticação e exemplos.
 
 O [README principal](../README.md) é o início rápido. Quando o comportamento
-mudar, o código e `config/config.example.json` são as fontes de verdade.
+mudar, use `workspace/` para dados do usuário e `src/constants/defaultConfig.json` como padrão interno.

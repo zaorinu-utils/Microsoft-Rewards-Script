@@ -2010,7 +2010,7 @@ All variables are optional.
 | `API_HOST`                 | `127.0.0.1`                   | Interface to bind. Use `0.0.0.0` only when remote access is required.                       |
 | `API_PORT`                 | `3010`                        | HTTP listen port.                                                                           |
 | `API_TOKEN`                | unset                         | Shared token required by every endpoint when configured.                                    |
-| `API_CORS_ORIGIN`          | `*`                           | Value returned in `Access-Control-Allow-Origin`.                                            |
+| `API_CORS_ORIGIN`          | unset                         | Optional exact origin returned in `Access-Control-Allow-Origin`.                            |
 | `API_LOG_BUFFER`           | `2000`                        | Maximum structured log entries kept in memory.                                              |
 | `API_RUN_HISTORY`          | `20`                          | Maximum completed runs kept in memory.                                                      |
 | `API_STOP_TIMEOUT_MS`      | `15000`                       | Graceful-stop window before forced termination.                                             |

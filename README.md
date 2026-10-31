@@ -17,16 +17,19 @@ git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
 npm run install:browser
+# Linux only, when Chromium reports missing system libraries:
+sudo npx playwright install-deps
 ```
 
-Copy `config/env.example` to `.env` and set at least one `ACCOUNT_N_EMAIL`. Then run:
+Run the setup wizard, then build and start the application:
 
 ```bash
+npm run setup
 npm run build
 npm run start
 ```
 
-If `config.json` does not exist, the application creates it from `config/config.example.json` and does not overwrite existing files. See the [usage and installation guide](docs/usage.md) and [configuration guide](docs/configuration.md).
+The wizard creates `workspace/config.json` and `workspace/accounts.txt`. Keep those files local; the workspace is ignored by Git. See the [usage and installation guide](docs/usage.md) and [configuration guide](docs/configuration.md).
 
 ## Commands
 
@@ -71,18 +74,19 @@ git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
 npm run install:browser
+# Linux only, when Chromium reports missing system libraries:
+sudo npx playwright install-deps
 ```
 
-Copie `config/env.example` para `.env` e informe ao menos um `ACCOUNT_N_EMAIL`. Depois:
+Execute o setup, compile e inicie o aplicativo:
 
 ```bash
+npm run setup
 npm run build
 npm run start
 ```
 
-Se `config.json` não existir, a aplicação cria uma cópia de
-`config/config.example.json` sem substituir arquivos existentes. Consulte
-[Instalação](docs/installation.md) e [Configuração](docs/configuration.md).
+O wizard cria `workspace/config.json` e `workspace/accounts.txt`. Mantenha esses arquivos locais; o workspace é ignorado pelo Git. Consulte [Instalação e uso](docs/usage.md) e [Configuração](docs/configuration.md).
 
 ## Comandos
 

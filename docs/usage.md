@@ -9,16 +9,19 @@ git clone https://github.com/lasbt/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 npm install
 npm run install:browser
+# Linux only, when Chromium reports missing system libraries:
+sudo npx playwright install-deps
 ```
 
-Copy `config/env.example` to `.env` and set at least one `ACCOUNT_N_EMAIL`. On first startup, `config.json` is created from `config/config.example.json` and an existing configuration is never overwritten. You can also create the files manually:
+Run the setup wizard and build/start normally:
 
 ```bash
-cp config/env.example .env
-cp config/config.example.json config.json
+npm run setup
+npm run build
+npm run start
 ```
 
-In PowerShell, use `Copy-Item` with the same paths. Build with `npm run build` and run with `npm run start`. Manual login requires a graphical session to open Chromium.
+Setup creates `workspace/accounts.txt` and `workspace/config.json`. Manual login requires a graphical session to open Chromium.
 
 ## Main Application
 
@@ -55,7 +58,7 @@ npm run build
 
 ## Troubleshooting
 
-If the browser does not start, run `npm run install:browser`. On Linux, install the system libraries required by Chromium. For configuration errors, compare `config.json` with `config/config.example.json`; accounts use the `ACCOUNT_N_*` names from `config/env.example` and require at least one email address.
+If the browser does not start, run `npm run install:browser`. On Linux, run `sudo npx playwright install-deps` or `npm run install:browser-deps` to install Chromium system libraries. Run `npm run setup` to create accounts.
 
 If login repeats, list sessions with `npm run clear-sessions -- list`, remove only the affected account with `npm run clear-sessions -- email person@example.com`, and log in again manually. Sessions contain cookies and must not be shared.
 
@@ -77,15 +80,9 @@ npm install
 npm run install:browser
 ```
 
-Copie `config/env.example` para `.env` e informe ao menos um
-`ACCOUNT_N_EMAIL`. `config.json` é criado de `config/config.example.json` na
-primeira inicialização e nunca sobrescreve uma configuração existente. Também
-é possível criar os arquivos manualmente:
-
-```bash
-cp config/env.example .env
-cp config/config.example.json config.json
-```
+Execute `npm run setup` para criar `workspace/accounts.txt` e
+`workspace/config.json`. Os arquivos do workspace são locais e não são
+versionados.
 
 No PowerShell, use `Copy-Item` com os mesmos caminhos. Compile com
 `npm run build` e execute com `npm run start`. O login manual precisa de sessão
@@ -143,10 +140,8 @@ npm run build
 
 ## Diagnóstico
 
-Se o navegador não iniciar, rode `npm run install:browser`. No Linux, instale
-as bibliotecas de sistema exigidas pelo Chromium. Para erros de configuração,
-compare `config.json` com `config/config.example.json`; contas usam os nomes
-`ACCOUNT_N_*` de `config/env.example` e exigem ao menos um e-mail.
+Se o navegador não iniciar, rode `npm run install:browser`. No Linux, execute
+`sudo npx playwright install-deps` ou `npm run install:browser-deps` para instalar as bibliotecas exigidas pelo Chromium. Para configurar contas, execute `npm run setup`.
 
 Se o login se repetir, liste sessões com `npm run clear-sessions -- list`,
 remova apenas a conta afetada com `npm run clear-sessions -- email

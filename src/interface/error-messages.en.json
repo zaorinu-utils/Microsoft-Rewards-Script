@@ -1,17 +1,7 @@
 [
     {
-        "match": "ACCOUNTS_JSON is required",
+        "match": "workspace/accounts.txt was not found",
         "code": "ACCOUNT_CONFIG_REQUIRED",
-        "message": "Account configuration is missing. Create a .env file from config/env.example and add your account data."
-    },
-    {
-        "match": "ACCOUNTS_JSON must contain valid JSON",
-        "code": "ACCOUNT_CONFIG_INVALID_JSON",
-        "message": "Account configuration is not valid JSON. Check the ACCOUNTS_JSON value in your .env file."
-    },
-    {
-        "match": "ACCOUNTS_JSON must be a JSON array",
-        "code": "ACCOUNT_CONFIG_INVALID_FORMAT",
-        "message": "Account configuration must be a JSON array. Check config/env.example for the expected format."
+        "message": "Account configuration is missing. Run npm run setup and add your accounts."
     }
 ]

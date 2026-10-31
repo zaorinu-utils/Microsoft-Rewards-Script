@@ -40,7 +40,7 @@ Ctrl+C and SIGTERM initiate cleanup. The bot flushes notification queues and clo
 | `scripts/main/`                | Manual login and session commands                        |
 | `scripts/api/`                 | HTTP API, process execution, and scheduling              |
 
-To add an application preference, update `config/config.example.json`, its type in `src/interface/Config.ts`, and its schema in `src/util/Validator.ts`. Account fields belong in `config/env.example` and are mapped in `src/util/Load.ts`. Change an activity in its group under `src/functions/activities/`; use `src/functions/Activities.ts` to dispatch it and `src/index.ts` to adjust when it runs. Search sources belong in `src/functions/QueryEngine.ts`, and RSS feeds in `src/constants/rssFeeds.ts`. Keep workflows within their existing responsibilities and avoid wrappers for one-off calls.
+To add an application preference, update `src/constants/defaultConfig.json`, its type in `src/interface/Config.ts`, and its schema in `src/util/Validator.ts`. Account fields belong in `workspace/accounts.txt` and are mapped in `src/util/Load.ts`. Change an activity in its group under `src/functions/activities/`; use `src/functions/Activities.ts` to dispatch it and `src/index.ts` to adjust when it runs. Search sources belong in `src/functions/QueryEngine.ts`, and RSS feeds in `src/constants/rssFeeds.ts`.
 
 # Arquitetura
 
@@ -102,9 +102,9 @@ timer. A API também oferece endpoints explícitos para parar e reiniciar.
 | `scripts/main/`                | Login manual e comandos para sessões                    |
 | `scripts/api/`                 | API HTTP, execução de processos e agenda                |
 
-Para adicionar uma preferência, atualize `config/config.example.json`, o tipo
+Para adicionar uma preferência, atualize `src/constants/defaultConfig.json`, o tipo
 em `src/interface/Config.ts` e o schema em `src/util/Validator.ts`. Campos de
-conta pertencem a `config/env.example` e são mapeados em `src/util/Load.ts`.
+conta pertencem a `workspace/accounts.txt` e são mapeados em `src/util/Load.ts`.
 Altere uma atividade no seu grupo em `src/functions/activities/`; use
 `src/functions/Activities.ts` para encaminhá-la e `src/index.ts` para ajustar
 quando executa. Fontes de busca ficam em `src/functions/QueryEngine.ts` e feeds

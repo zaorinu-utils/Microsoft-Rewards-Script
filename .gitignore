@@ -10,3 +10,9 @@ note
 .playwright-chromium-installed
 .stfolder/
 .env
+accounts.txt
+config.json
+/workspace/*
+!/workspace/
+!/workspace/accounts.example.txt
+!/workspace/config.example.json

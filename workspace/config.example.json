@@ -1,0 +1,14 @@
+{
+    "webhook": {
+        "discord": {
+            "enabled": false,
+            "url": ""
+        },
+        "webhookLogFilter": {
+            "enabled": false,
+            "mode": "whitelist",
+            "levels": ["error"],
+            "keywords": ["Starting account", "Points collected"]
+        }
+    }
+}

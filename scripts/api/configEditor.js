@@ -3,13 +3,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 function resolveConfigPath(projectRoot) {
-    const candidates = [
-        path.join(projectRoot, 'config.json'),
-        path.join(projectRoot, 'dist', 'config.json'),
-        path.join(projectRoot, 'src', 'config.json'),
-        path.resolve(process.cwd(), 'config.json')
-    ]
-    return candidates.find(p => fs.existsSync(p)) ?? path.join(projectRoot, 'config.json')
+    return path.join(projectRoot, 'workspace', 'config.json')
 }
 
 async function loadConfigSync(projectRoot, override) {

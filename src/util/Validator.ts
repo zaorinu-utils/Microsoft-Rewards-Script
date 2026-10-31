@@ -2,7 +2,7 @@ import { z } from 'zod'
 import semver from 'semver'
 import ms, { StringValue } from 'ms'
 import pkg from '../../package.json'
-import defaultConfigJson from '../../config/config.example.json'
+import defaultConfigJson from '../constants/defaultConfig.json'
 
 import { Config } from '../interface/Config'
 import { Account } from '../interface/Account'
@@ -70,6 +70,7 @@ export const ConfigSchema = z.object({
     headless: z.boolean(),
     clusters: z.number().int().nonnegative(),
     errorDiagnostics: z.boolean(),
+    diagnosticsPassword: z.string().min(1),
     ensureStreakProtection: z.boolean(),
     autoClaimPunchcardRewards: z.boolean(),
     continueOnBotWarning: z.boolean().default(false),

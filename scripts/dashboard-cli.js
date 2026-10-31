@@ -10,7 +10,8 @@ export const {
     DASHBOARD_ART,
     parseSseFrame,
     renderDashboard,
-    runDashboard
+    runDashboard,
+    stageFor
 } = dashboard
 
 async function main() {

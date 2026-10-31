@@ -342,11 +342,13 @@ export class MicrosoftRewardsBot {
                 const totalInitialPoints = allAccountStats.reduce((sum, s) => sum + s.initialPoints, 0)
                 const totalFinalPoints = allAccountStats.reduce((sum, s) => sum + s.finalPoints, 0)
                 const totalDurationMinutes = ((Date.now() - runStartTime) / 1000 / 60).toFixed(1)
+                const allAccountsSuccessful = allAccountStats.length > 0 && allAccountStats.every(account => account.success)
+                const alreadyCollected = allAccountsSuccessful && totalCollectedPoints === 0 ? 'true' : 'false'
 
                 this.logger.info(
                     'main',
                     'RUN-END',
-                    `Completed all accounts | accountsProcessed=${allAccountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes}`,
+                    `Completed all accounts | accountsProcessed=${allAccountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes} | alreadyCollected=${alreadyCollected}`,
                     'green'
                 )
 
@@ -514,11 +516,13 @@ export class MicrosoftRewardsBot {
             const totalInitialPoints = accountStats.reduce((sum, s) => sum + s.initialPoints, 0)
             const totalFinalPoints = accountStats.reduce((sum, s) => sum + s.finalPoints, 0)
             const totalDurationMinutes = ((Date.now() - runStartTime) / 1000 / 60).toFixed(1)
+            const allAccountsSuccessful = accountStats.length > 0 && accountStats.every(account => account.success)
+            const alreadyCollected = allAccountsSuccessful && totalCollectedPoints === 0 ? 'true' : 'false'
 
             this.logger.info(
                 'main',
                 'RUN-END',
-                `Completed all accounts | accountsProcessed=${accountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes}`,
+                `Completed all accounts | accountsProcessed=${accountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes} | alreadyCollected=${alreadyCollected}`,
                 'green'
             )
 
@@ -987,7 +991,7 @@ async function main(): Promise<void> {
         }
         rewardsBot.logger.error('main', 'UNCAUGHT-EXCEPTION', error)
         await flushAllWebhooks()
-        process.exit(1)
+        process.exitCode = 1
     })
     process.on('unhandledRejection', async reason => {
         if (isBrowserClosedError(reason)) {
@@ -1000,7 +1004,7 @@ async function main(): Promise<void> {
         }
         rewardsBot.logger.error('main', 'UNHANDLED-REJECTION', reason as Error)
         await flushAllWebhooks()
-        process.exit(1)
+        process.exitCode = 1
     })
 
     try {
@@ -1017,5 +1021,5 @@ main().catch(async error => {
     const tmpBot = new MicrosoftRewardsBot()
     tmpBot.logger.error('main', 'MAIN-ERROR', error as Error)
     await flushAllWebhooks()
-    process.exit(1)
+    process.exitCode = 1
 })

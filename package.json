@@ -9,10 +9,12 @@
     },
     "scripts": {
         "install:browser": "npx patchright install chromium",
+        "install:browser-deps": "npx patchright install-deps chromium",
         "build": "rimraf dist && tsc",
         "start": "node ./dist/index.js",
         "ts-start": "ts-node ./src/index.ts",
         "dev": "ts-node ./src/index.ts -dev",
+        "setup": "node ./scripts/setup.js",
         "api": "node ./scripts/api/server.js",
         "dashboard": "npm run build --silent && node --env-file-if-exists=.env ./scripts/dashboard-cli.js",
         "dashboard:demo": "npm run build --silent && node ./scripts/dashboard-cli.js --demo",

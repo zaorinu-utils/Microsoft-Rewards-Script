@@ -1,17 +1,10 @@
 import { createHash } from 'node:crypto'
 import errorMessages from './error-messages.en.json'
 import { appendErrorLog } from '../util/AppData'
+import { errorCodeFromHash } from '../constants/errorWords'
+import { renderDashboard } from './TerminalDashboardLayout'
 
-export const DASHBOARD_ART = [
-    '                                        ',
-    '                    ,--.    ,--.        ',
-    " ,---. ,---.  ,---. |  |,-. `--' ,---.  ",
-    "| .--'| .-. || .-. ||     / ,--.| .-. : ",
-    "\\ `--.' '-' '' '-' '|  \\  \\ |  |\\   --. ",
-    " `---' `---'  `---' `--'`--'`--' `----' ",
-    '                                        ',
-    '                                        '
-].join('\n')
+export { DASHBOARD_ART, renderDashboard } from './TerminalDashboardLayout'
 
 const DEMO_ACCOUNTS = ['alex@example.com', 'jordan@example.com', 'casey@example.com', 'taylor@example.com']
 const DEMO_MESSAGES = ['Session started', 'Progress updated', 'Points received', 'Account complete']
@@ -29,6 +22,7 @@ export interface DashboardState {
     appStatus: string
     pid: number | null
     startedAt: string
+    startedAtMonotonic: number
     currentAccount: string | null
     accountsSeen: number
     accountsTotal: number | null
@@ -36,7 +30,7 @@ export interface DashboardState {
     events: DashboardEvent[]
     runId: string
     stage: string
-    error: { code: string; message: string; logPath: string | null } | null
+    error: { code: string; message: string; logPath: string | null; details?: string } | null
 }
 
 interface ErrorMessageEntry {
@@ -63,13 +57,14 @@ export function createDashboardState({
         appStatus: mode === 'demo' ? 'running' : 'unknown',
         pid: null,
         startedAt: new Date().toISOString(),
+        startedAtMonotonic: performance.now(),
         currentAccount: null,
         accountsSeen: 0,
         accountsTotal: null,
         pointsGained: 0,
         events: [],
         runId: createHash('sha256').update(`${process.pid}:${Date.now()}`).digest('hex').slice(0, 10),
-        stage: 'Starting',
+        stage: 'Checking all accounts > Collecting points',
         error: null
     }
 }
@@ -105,7 +100,11 @@ export function applyDashboardEvent(state: DashboardState, event: DashboardEvent
         const live = isRecord(run.live) ? run.live : {}
         state.appStatus = typeof status.state === 'string' ? status.state : state.appStatus
         state.pid = typeof status.pid === 'number' ? status.pid : null
-        state.startedAt = typeof status.startedAt === 'string' ? status.startedAt : state.startedAt
+        const startedAt = typeof status.startedAt === 'string' ? status.startedAt : null
+        if (startedAt && startedAt !== state.startedAt) {
+            state.startedAt = startedAt
+            state.startedAtMonotonic = performance.now()
+        }
         state.currentAccount = typeof live.currentAccount === 'string' ? live.currentAccount : null
         state.accountsSeen = typeof run.accountsSeen === 'number' ? run.accountsSeen : 0
         state.accountsTotal = typeof run.accountsTotal === 'number' ? run.accountsTotal : null
@@ -113,6 +112,10 @@ export function applyDashboardEvent(state: DashboardState, event: DashboardEvent
     } else if (event.type === 'log') {
         const entry = event.data
         const text = [entry.title, entry.message].filter(value => typeof value === 'string').join(': ')
+        if (entry.title === 'RUN-END' && typeof entry.message === 'string' && /alreadyCollected=true\b/i.test(entry.message)) {
+            state.stage = 'Already collected all points for today'
+            state.appStatus = 'complete'
+        }
         state.events.push({
             level: typeof entry.level === 'string' ? entry.level : 'info',
             at: typeof entry.ts === 'string' ? entry.ts : null,
@@ -124,73 +127,45 @@ export function applyDashboardEvent(state: DashboardState, event: DashboardEvent
     return state
 }
 
-function elapsed(startedAt: string): string {
-    const seconds = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
-    return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`
-}
-
-function fit(text: unknown, width: number): string {
-    const value = String(text ?? '').replace(/[\r\n\t]/g, ' ')
-    return value.length > width ? `${value.slice(0, Math.max(0, width - 3))}...` : value
-}
-
-function cyan(text: string): string {
-    return `\u001b[36m${text}\u001b[39m`
-}
-
-export function maskEmail(email: string | null): string {
-    if (!email) return 'Waiting for account'
-    const [local = '', host = ''] = email.split('@')
-    const lastDot = host.lastIndexOf('.')
-    if (lastDot < 0) return `${maskSegment(local)}@${maskSegment(host)}`
-    return `${maskSegment(local)}@${maskSegment(host.slice(0, lastDot))}${host.slice(lastDot)}`
-}
-
-function maskSegment(value: string): string {
-    return `${value.slice(0, 2)}${'*'.repeat(Math.max(0, value.length - 2))}`
-}
-
 function friendlyError(message: string): { code: string; message: string } {
+    const hash = createHash('sha256').update(message).digest('hex')
     const known = knownErrors.find(entry => message.includes(entry.match))
-    if (known) return { code: known.code, message: known.message }
+    if (known) return { code: errorCodeFromHash(hash), message: known.message }
 
-    const code = createHash('sha256').update(message).digest('hex').slice(0, 12).toUpperCase()
-    return { code: `ERR-${code}`, message: 'An unexpected error occurred. Share this reference with the development team.' }
+    const cleanMessage = message.replace(/^Error:\s*/i, '').trim()
+    return { code: errorCodeFromHash(hash), message: cleanMessage || 'An unexpected error occurred.' }
 }
 
-function stageFor(title: string, message: string): string {
-    if (title === 'RUN-START') return 'Preparing run'
-    if (title === 'RUN-END') return 'Run complete'
-    if (/Starting account:/i.test(message)) return 'Starting account'
-    if (/LOGIN/i.test(title)) return 'Signing in'
-    if (/SEARCH/i.test(title)) return 'Searching'
-    if (/DAILY|PROMOTION|PUNCHCARD|CHECK-IN|READ-TO-EARN/i.test(title)) return 'Completing activities'
-    if (/ACCOUNT-END/.test(title)) return 'Finishing account'
-    if (/ERROR/.test(title)) return 'Stopped on error'
-    return title.toLowerCase().replace(/[-_]+/g, ' ')
-}
-
-export function renderDashboard(state: DashboardState, width = 80, color = process.stdout.isTTY): string {
-    const screenWidth = Math.max(40, Math.min(100, width))
-    const accountCount = state.accountsTotal ?? state.accountsSeen
-    const art = color && !process.env.NO_COLOR ? cyan(DASHBOARD_ART) : DASHBOARD_ART
-    const lines = [
-        ...art.split('\n'),
-        '',
-        `Run       ${state.runId}`,
-        `Runtime   ${elapsed(state.startedAt)}`,
-        `Accounts  ${accountCount}`,
-        `Current   ${maskEmail(state.currentAccount)}`,
-        `Doing now ${fit(state.stage, screenWidth - 11)}`
-    ]
-
-    if (state.error) {
-        lines.push('', `Error ${state.error.code}`, fit(state.error.message, screenWidth))
-        if (state.error.logPath) lines.push(fit(`Details saved to ${state.error.logPath}`, screenWidth))
+export function stageFor(title: string, message: string): string {
+    const activity: Record<string, string> = {
+        'RUN-START': 'Checking accounts and preparing rewards',
+        'RUN-END': 'Finished checking accounts',
+        'ACCOUNT-START': 'Checking account',
+        'ACCOUNT-END': 'Finished account',
+        'ACCOUNT-DELAY': 'Waiting between accounts',
+        'ACCOUNT-SKIP': 'Skipping account',
+        'BROWSER': 'Opening browser',
+        'LOGIN': 'Signing in',
+        'LOGIN-CHECKPOINT': 'Checking login status',
+        'LOGIN-APP': 'Opening Microsoft Rewards login',
+        'SEARCH-MANAGER': 'Preparing searches',
+        'SEARCH-BING': 'Collecting search points',
+        'DAILY-SET': 'Completing Daily Set',
+        'MORE-PROMOTIONS': 'Checking more promotions',
+        'PUNCHCARD': 'Completing punch cards',
+        'READ-TO-EARN': 'Completing Read to Earn',
+        'DAILY-CHECK-IN': 'Completing daily check-in',
+        'APP-PROMOTION': 'Completing app promotion',
+        'CLAIM-REWARD': 'Claiming reward'
     }
-
-    lines.push('', 'Press Q to exit')
-    return lines.map(line => fit(line, screenWidth)).join('\n')
+    if (activity[title]) return activity[title]
+    if (/Starting account:/i.test(message)) return 'Checking account'
+    if (/LOGIN/i.test(title)) return 'Signing in'
+    if (/SEARCH/i.test(title)) return 'Collecting search points'
+    if (/DAILY/i.test(title)) return 'Completing Daily Set'
+    if (/PROMOTION/i.test(title)) return 'Completing promotions'
+    if (/PUNCHCARD/i.test(title)) return 'Completing punch cards'
+    return title.replace(/[-_]+/g, ' ').toLowerCase().replace(/^./, character => character.toUpperCase())
 }
 
 export class TerminalDashboard {
@@ -198,12 +173,16 @@ export class TerminalDashboard {
     private active = false
     private fatalError = false
     private removeQuitListener: (() => void) | null = null
+    private runtimeInterval: NodeJS.Timeout | null = null
+    private errorFinalized = false
 
     writeLog(level: string, userName: string, title: string, message: string, diagnosticMessage = message): boolean {
         if (!process.stdout.isTTY) return false
+        if (this.errorFinalized && (level === 'error' || title === 'RUN-END')) return true
 
         if (title === 'RUN-START') {
             this.state.startedAt = new Date().toISOString()
+            this.state.startedAtMonotonic = performance.now()
             this.state.appStatus = 'running'
             this.state.runId = createHash('sha256')
                 .update(`${this.state.startedAt}:${process.pid}`)
@@ -215,13 +194,22 @@ export class TerminalDashboard {
             this.state.accountsSeen = 0
             this.state.pointsGained = 0
             this.state.error = null
+            this.errorFinalized = false
         } else if (title === 'RUN-END') {
             this.state.appStatus = 'complete'
+            if (/alreadyCollected=true\b/i.test(message)) {
+                this.state.stage = 'Already collected all points for today'
+            } else {
+                this.state.stage = stageFor(title, message)
+            }
         } else if (level === 'error') {
             this.state.appStatus = 'error'
             this.state.stage = 'Stopped on error'
             this.fatalError = ['MAIN-ERROR', 'UNCAUGHT-EXCEPTION', 'UNHANDLED-REJECTION'].includes(title)
-            const rawMessage = diagnosticMessage.split(' | stack=')[0]
+            const rawMessage = diagnosticMessage
+                .split(/\r?\n/, 1)[0]
+                ?.replace(/^\S+\s+/, '')
+                .replace(/^\w+:\s*/, '') ?? ''
             const error = friendlyError(rawMessage)
             let logPath: string | null = null
             try {
@@ -230,10 +218,10 @@ export class TerminalDashboard {
                     code: error.code,
                     title,
                     message: rawMessage,
-                    details: diagnosticMessage
+                    details: process.argv.includes('-dev') ? diagnosticMessage : undefined
                 })
             } catch {}
-            this.state.error = { ...error, logPath }
+            this.state.error = { ...error, logPath, details: diagnosticMessage }
         } else {
             this.state.stage = stageFor(title, message)
         }
@@ -243,7 +231,13 @@ export class TerminalDashboard {
             this.state.currentAccount = account
             this.state.accountsSeen++
         } else if (userName !== 'MAIN') {
-            this.state.currentAccount = userName
+            const currentEmail = this.state.currentAccount
+            const currentLocal = currentEmail?.includes('@')
+                ? currentEmail.slice(0, currentEmail.indexOf('@'))
+                : null
+            if (!currentEmail || (currentEmail.includes('@') && currentLocal !== userName)) {
+                this.state.currentAccount = userName
+            }
         }
 
         const points = /pointsGained=(-?\d+)/.exec(message)
@@ -255,6 +249,11 @@ export class TerminalDashboard {
         if (!this.active) {
             this.active = true
             process.stdout.write('\u001b[?1049h\u001b[?25l')
+            this.runtimeInterval = setInterval(() => {
+                if (!this.errorFinalized) {
+                    process.stdout.write(`\u001b[H\u001b[2J${renderDashboard(this.state, process.stdout.columns || 80, true)}`)
+                }
+            }, 1000)
             process.once('exit', () => this.restoreTerminal())
             this.removeQuitListener = listenForQuit(() => {
                 if (this.fatalError) {
@@ -265,11 +264,29 @@ export class TerminalDashboard {
             })
         }
 
-        process.stdout.write(`\u001b[H\u001b[2J${renderDashboard(this.state, process.stdout.columns || 80, true)}`)
+        if (title === 'RUN-END' || level === 'error') {
+            const errorSignature = level === 'error'
+                ? `${this.state.error?.code}:${this.state.error?.message}`
+                : ''
+            if (errorSignature && !this.errorFinalized) {
+                this.errorFinalized = true
+                const finalScreen = renderDashboard(this.state, process.stdout.columns || 80, false)
+                this.restoreTerminal()
+                process.stdout.write(`\n${finalScreen}\n`)
+            } else if (!errorSignature) {
+                const finalScreen = renderDashboard(this.state, process.stdout.columns || 80, false)
+                this.restoreTerminal()
+                process.stdout.write(`\n${finalScreen}\n`)
+            }
+        } else {
+            process.stdout.write(`\u001b[H\u001b[2J${renderDashboard(this.state, process.stdout.columns || 80, true)}`)
+        }
         return true
     }
 
     private restoreTerminal(): void {
+        if (this.runtimeInterval) clearInterval(this.runtimeInterval)
+        this.runtimeInterval = null
         this.removeQuitListener?.()
         this.removeQuitListener = null
         if (this.active) process.stdout.write('\u001b[?25h\u001b[?1049l')
@@ -324,7 +341,12 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
     })
 }
 
-async function consumeEvents(response: Response, state: DashboardState, signal: AbortSignal): Promise<void> {
+async function consumeEvents(
+    response: Response,
+    state: DashboardState,
+    signal: AbortSignal,
+    onComplete: () => void
+): Promise<void> {
     if (!response.body) throw new Error('API returned an empty event stream.')
     const decoder = new TextDecoder()
     let buffer = ''
@@ -338,6 +360,10 @@ async function consumeEvents(response: Response, state: DashboardState, signal: 
             if (event) applyDashboardEvent(state, event)
         }
         paint(state)
+        if (state.appStatus === 'complete') {
+            onComplete()
+            return
+        }
         if (signal.aborted) return
     }
 }
@@ -346,7 +372,12 @@ function paint(state: DashboardState): void {
     process.stdout.write(`\u001b[H\u001b[2J${renderDashboard(state, process.stdout.columns || 80, true)}`)
 }
 
-async function connectToApi(state: DashboardState, signal: AbortSignal, token: string): Promise<void> {
+async function connectToApi(
+    state: DashboardState,
+    signal: AbortSignal,
+    token: string,
+    onComplete: () => void
+): Promise<void> {
     while (!signal.aborted) {
         try {
             state.connection = 'connecting'
@@ -357,7 +388,8 @@ async function connectToApi(state: DashboardState, signal: AbortSignal, token: s
             if (!response.ok) throw new Error(`API returned HTTP ${response.status}`)
             state.connection = 'connected'
             paint(state)
-            await consumeEvents(response, state, signal)
+            await consumeEvents(response, state, signal, onComplete)
+            if (state.appStatus === 'complete') return
             if (!signal.aborted) throw new Error('Event stream ended')
         } catch (error) {
             if (signal.aborted) return
@@ -378,17 +410,28 @@ export async function runDashboard({ demo = false }: { demo?: boolean } = {}): P
     let tick = 0
     let closed = false
 
-    const cleanup = (): void => {
+    let removeQuitListener: (() => void) | null = null
+    const cleanup = (exit = false): void => {
         if (closed) return
         closed = true
         controller.abort()
         if (interval) clearInterval(interval)
+        removeQuitListener?.()
         process.stdout.write('\u001b[?25h\u001b[?1049l')
+        if (exit) process.exit(0)
+    }
+
+    const finish = (): void => {
+        if (closed) return
+        const finalScreen = renderDashboard(state, process.stdout.columns || 80, false)
+        cleanup()
+        process.stdout.write(`\n${finalScreen}\n`)
     }
 
     process.stdout.write('\u001b[?1049h\u001b[?25l')
-    process.once('SIGINT', cleanup)
-    process.once('SIGTERM', cleanup)
+    process.once('SIGINT', () => cleanup())
+    process.once('SIGTERM', () => cleanup())
+    removeQuitListener = listenForQuit(() => cleanup(true))
 
     if (demo) {
         addDemoEvent(state, tick++)
@@ -402,7 +445,7 @@ export async function runDashboard({ demo = false }: { demo?: boolean } = {}): P
 
     const token = process.env.CONTROL_API_TOKEN || process.env.API_TOKEN || ''
     interval = setInterval(() => paint(state), 1000)
-    await connectToApi(state, controller.signal, token)
+    await connectToApi(state, controller.signal, token, finish)
 }
 
 export async function runDashboardCli(args: string[] = process.argv.slice(2)): Promise<void> {

@@ -1,4 +1,19 @@
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { parseAccountsJson } from '../env.js'
+
+function createTemporaryAccountsFile(accounts) {
+    const filePath = path.join(os.tmpdir(), `rewards-accounts-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`)
+    fs.writeFileSync(filePath, accounts.map(account =>
+        [
+            `email: ${account.email}`,
+            `password: ${account.password || ''}`,
+            ...(account.totpSecret ? [`totpSecret: ${account.totpSecret}`] : [])
+        ].join('\n')
+    ).join('\n\n'), { mode: 0o600 })
+    return filePath
+}
 
 function sanitizeProxyUrl(value) {
     try {
@@ -50,7 +65,7 @@ export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
     }
 
     return {
-        env: { ACCOUNTS_JSON: JSON.stringify([selected]) },
+        env: { ACCOUNTS_FILE: createTemporaryAccountsFile([selected]) },
         account: { index, email: selected.email }
     }
 }
@@ -90,7 +105,7 @@ export function buildExcludedAccountsEnv(excludedAccountIndexes, sourceEnv = pro
     }
 
     const env = {
-        ACCOUNTS_JSON: JSON.stringify(sourceAccounts.filter((_, index) => !excludedSet.has(index + 1)))
+        ACCOUNTS_FILE: createTemporaryAccountsFile(sourceAccounts.filter((_, index) => !excludedSet.has(index + 1)))
     }
 
     return {
