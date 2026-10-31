@@ -25,6 +25,40 @@ function workspaceFileName(filename) {
     return `${filename.slice(0, -extension.length)}.dev${extension}`
 }
 
+function readUserConfigDefault() {
+    const appConfigPath = path.resolve('src', 'constants', 'appConfig.json')
+    const appConfig = JSON.parse(fs.readFileSync(appConfigPath, 'utf8'))
+    return { webhook: appConfig.webhook }
+}
+
+async function validateDiscordWebhook(url) {
+    let parsed
+    try {
+        parsed = new URL(url)
+    } catch {
+        return false
+    }
+    if (parsed.protocol !== 'https:' || !['discord.com', 'discordapp.com', 'canary.discord.com'].includes(parsed.hostname)) {
+        return false
+    }
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    try {
+        const response = await fetch(`${parsed.origin}${parsed.pathname}${parsed.search}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ content: 'Cookie is now using this webhook!' }),
+            signal: controller.signal
+        })
+        return response.ok || response.status === 204
+    } catch {
+        return false
+    } finally {
+        clearTimeout(timeout)
+    }
+}
+
 async function promptSecret(rl, question) {
     if (!input.isTTY || typeof input.setRawMode !== 'function') {
         return rl.question(question)
@@ -76,9 +110,7 @@ async function main() {
     fs.mkdirSync(workspaceDirectory, { recursive: true })
 
     if (!fs.existsSync(configPath)) {
-        const examplePath = path.join(workspaceDirectory, 'config.json')
-        const exampleConfig = JSON.parse(fs.readFileSync(examplePath, 'utf8'))
-        fs.writeFileSync(configPath, `${JSON.stringify(exampleConfig, null, 4)}\n`, { mode: 0o600 })
+        fs.writeFileSync(configPath, `${JSON.stringify(readUserConfigDefault(), null, 4)}\n`, { mode: 0o600 })
     }
 
     const rl = readline.createInterface({ input, output })
@@ -110,7 +142,37 @@ async function main() {
         existingEmails.add(email.toLowerCase())
     }
 
+    let config
+    try {
+        config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    } catch {
+        config = readUserConfigDefault()
+    }
+
+    while (true) {
+        const webhookUrl = (await rl.question('Discord webhook URL (leave empty to skip): ')).trim()
+        if (!webhookUrl) {
+            config.webhook ??= {}
+            config.webhook.discord ??= {}
+            config.webhook.discord.enabled = false
+            config.webhook.discord.url = ''
+            output.write('Webhook setup skipped.\n')
+            break
+        }
+        output.write('Testing webhook...\n')
+        if (await validateDiscordWebhook(webhookUrl)) {
+            config.webhook ??= {}
+            config.webhook.discord = { enabled: true, url: webhookUrl }
+            output.write('Webhook is valid. Test message sent.\n')
+            break
+        }
+        output.write('Webhook is invalid or unreachable. Please try again.\n')
+    }
+
     rl.close()
+
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 4)}\n`, { mode: 0o600 })
+    fs.chmodSync(configPath, 0o600)
 
     if (accounts.length) {
         const additions = accounts

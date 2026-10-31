@@ -31,6 +31,9 @@ Use `npm run setup` for production files (`workspace/accounts.txt` and
 (`workspace/accounts.dev.txt` and `workspace/config.dev.json`). `npm run dev`
 selects development files automatically. Check the development setup with
 `npm run doctor -- -dev`.
+The setup wizard asks for a Discord webhook URL. Leave it empty to disable
+notifications; otherwise, it sends a test message and retries until the URL
+works.
 
 ## Main Application
 
