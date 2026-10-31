@@ -69,6 +69,20 @@ function printHeader() {
     output.write(`${BANNER}\n`)
 }
 
+function clearScreen() {
+    output.write('\x1Bc')
+}
+
+function printScreen(title) {
+    clearScreen()
+    printHeader()
+    if (title) output.write(`\n${title}\n`)
+}
+
+async function waitToReturn(rl) {
+    await rl.question('\nPress Enter to return to the menu: ')
+}
+
 async function validateDiscordWebhook(url) {
     let parsed
     try {
@@ -162,42 +176,54 @@ async function main() {
         config = readUserConfigDefault()
     }
 
-    printHeader()
     while (true) {
+        printScreen()
         printSummary(accounts, config)
         output.write('1. Add account\n2. Remove account\n3. Configure webhook\n4. Show summary\n5. Save and start\n')
         const choice = (await rl.question('Choose an option: ')).trim()
 
         if (choice === '1') {
+            printScreen('Add account')
             const email = (await rl.question('Email: ')).trim()
             if (!validEmail(email)) {
                 output.write('Enter a valid email address.\n')
+                await waitToReturn(rl)
                 continue
             }
             if (accounts.some(account => account.email.toLowerCase() === email.toLowerCase())) {
                 output.write('That account is already configured.\n')
+                await waitToReturn(rl)
                 continue
             }
             const password = (await promptSecret(rl, 'Password: ')).trim()
             if (!password) {
                 output.write('Password cannot be empty.\n')
+                await waitToReturn(rl)
                 continue
             }
             const totpSecret = (await rl.question('TOTP secret (optional): ')).trim()
             accounts.push({ email, password, ...(totpSecret ? { totpSecret } : {}) })
+            output.write(`Added ${email}.\n`)
+            await waitToReturn(rl)
         } else if (choice === '2') {
+            printScreen('Remove account')
             if (!accounts.length) {
                 output.write('There are no accounts to remove.\n')
+                await waitToReturn(rl)
                 continue
             }
+            printSummary(accounts, config)
             const selection = Number.parseInt(await rl.question('Account number to remove: '), 10)
             if (!Number.isInteger(selection) || selection < 1 || selection > accounts.length) {
                 output.write('Enter a valid account number.\n')
+                await waitToReturn(rl)
                 continue
             }
             const [removed] = accounts.splice(selection - 1, 1)
             output.write(`Removed ${removed.email}.\n`)
+            await waitToReturn(rl)
         } else if (choice === '3') {
+            printScreen('Configure webhook')
             while (true) {
                 const webhookUrl = (await rl.question('Discord webhook URL (leave empty to disable): ')).trim()
                 if (!webhookUrl) {
@@ -215,16 +241,23 @@ async function main() {
                 }
                 output.write('Webhook is invalid or unreachable. Please try again.\n')
             }
+            await waitToReturn(rl)
         } else if (choice === '4') {
+            printScreen('Setup summary')
             printSummary(accounts, config)
+            await waitToReturn(rl)
         } else if (choice === '5') {
             if (!accounts.length) {
                 output.write('Add at least one account before starting.\n')
+                await waitToReturn(rl)
                 continue
             }
+            printScreen('Save and start')
             break
         } else {
+            printScreen('Invalid option')
             output.write('Enter a number from 1 to 5.\n')
+            await waitToReturn(rl)
         }
     }
 
