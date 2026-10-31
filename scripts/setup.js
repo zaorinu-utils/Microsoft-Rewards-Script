@@ -3,12 +3,8 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 
-const BANNER = `
-╔══════════════════════════════════════════╗
-║      MICROSOFT REWARDS SCRIPT            ║
-║              SETUP                       ║
-╚══════════════════════════════════════════╝
-`
+const asciiArtPath = path.resolve('src', 'constants', 'asciiArt.json')
+const BANNER = `${JSON.parse(fs.readFileSync(asciiArtPath, 'utf8')).join('\n')}\n`
 
 function validEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)

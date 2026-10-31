@@ -1,13 +1,6 @@
-export const DASHBOARD_ART = [
-    '                                        ',
-    '                    ,--.    ,--.        ',
-    " ,---. ,---.  ,---. |  |,-. `--' ,---.  ",
-    "| .--'| .-. || .-. ||     / ,--.| .-. : ",
-    "\\ `--.' '-' '' '-' '|  \\  \\ |  |\\   --. ",
-    " `---' `---'  `---' `--'`--'`--' `----' ",
-    '                                        ',
-    '                                        '
-].join('\n')
+import asciiArt from '../constants/asciiArt.json'
+
+export const DASHBOARD_ART = asciiArt.join('\n')
 
 export interface DashboardLayoutState {
     mode: 'demo' | 'live' | 'app'
