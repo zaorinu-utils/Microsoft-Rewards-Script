@@ -1,2 +1,0 @@
-# Fill one block per account in this file.
-# Optional: totpSecret, recoveryEmail, region, and proxy settings.

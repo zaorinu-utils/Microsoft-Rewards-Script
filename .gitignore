@@ -1,18 +1,4 @@
-sessions/
-dist/
-.dev/
 node_modules/
-/config.json
-/.vscode
-/diagnostics
-note
-.DS_Store
-.playwright-chromium-installed
-.stfolder/
+dist/
 .env
-
-# Local workspace credentials and runtime files.
-/workspace/*
-!/workspace/
-!/workspace/accounts.txt
-!/workspace/config.json
+workspace/

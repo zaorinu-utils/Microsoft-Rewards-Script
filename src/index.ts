@@ -26,6 +26,7 @@ import { SearchManager } from './functions/activities/search/SearchManager'
 import type { Account } from './interface/Account'
 import HttpClient from './util/Http'
 import { sendDiscord, flushDiscordQueue } from './logging/Discord'
+import { runOnboarding } from './util/Onboarding'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
 import type { AppEarnablePoints } from './interface/Points'
@@ -964,6 +965,7 @@ export class MicrosoftRewardsBot {
 export { executionContext }
 
 async function main(): Promise<void> {
+    runOnboarding()
     checkNodeVersion()
     const rewardsBot = new MicrosoftRewardsBot()
 
